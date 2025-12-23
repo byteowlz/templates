@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "templates": {
+    "rust-cli": {
+      "description": "Rust CLI application",
+      "path": "rust-cli",
+      "languages": ["rust"],
+      "features": ["clap", "config", "xdg", "release-workflow"]
+    },
+    "rust-workspace": {
+      "description": "Rust workspace with multiple crates",
+      "path": "rust-workspace",
+      "languages": ["rust"],
+      "features": ["clap", "config", "xdg", "release-workflow", "workspace"]
+    },
+    "python-cli": {
+      "description": "Python CLI application",
+      "path": "python-cli",
+      "languages": ["python"],
+      "features": ["uv", "typer", "xdg", "release-workflow"]
+    },
+    "go-cli": {
+      "description": "Go CLI application",
+      "path": "go-cli",
+      "languages": ["go"],
+      "features": ["cobra", "viper", "xdg", "release-workflow"]
+    }
+  }
+}
