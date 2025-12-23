@@ -1,5 +1,7 @@
-# Example configuration for python-cli.
-# Copy or symlink this file to ~/.config/python-cli/config.toml to customize.
+"$schema" = "https://raw.githubusercontent.com/byteowlz/schemas/refs/heads/main/{{project_name}}/{{project_name}}.config.schema.json"
+
+# Example configuration for {{project_name}}.
+# Copy or symlink this file to ~/.config/{{project_name}}/config.toml to customize.
 
 [logging]
 # Supported levels: trace, debug, info, warning, error, critical

@@ -1,5 +1,7 @@
-# Example configuration for the rust-workspace template.
-# Copy this file to $XDG_CONFIG_HOME/rust-workspace/config.toml and adjust as needed.
+"$schema" = "https://raw.githubusercontent.com/byteowlz/schemas/refs/heads/main/{{project_name}}/{{project_name}}.config.schema.json"
+
+# Example configuration for {{project_name}}.
+# Copy this file to $XDG_CONFIG_HOME/{{project_name}}/config.toml and adjust as needed.
 
 profile = "default"
 
@@ -7,7 +9,7 @@ profile = "default"
 # Valid levels: error, warn, info, debug, trace
 level = "info"
 # Optional path for log file output; supports ~ and environment variables.
-# file = "~/Library/Logs/rust-workspace.log"
+# file = "~/Library/Logs/{{project_name}}.log"
 
 [runtime]
 # Override the worker pool size; defaults to logical CPU count when unset.
@@ -18,5 +20,5 @@ fail_fast = true
 
 [paths]
 # Uncomment to move persistent data/state to custom directories.
-# data_dir = "$XDG_DATA_HOME/rust-workspace"
-# state_dir = "$XDG_STATE_HOME/rust-workspace"
+# data_dir = "$XDG_DATA_HOME/{{project_name}}"
+# state_dir = "$XDG_STATE_HOME/{{project_name}}"

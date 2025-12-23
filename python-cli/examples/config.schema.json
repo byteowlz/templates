@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/byteowlz/{{project_name}}/schemas/config.schema.json",
+  "title": "{{project_name}} configuration",
+  "description": "Configuration schema for {{project_name}}",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for editor support"
+    },
+    "logging": {
+      "type": "object",
+      "description": "Logging configuration",
+      "properties": {
+        "level": {
+          "type": "string",
+          "description": "Log level",
+          "enum": ["trace", "debug", "info", "warning", "error", "critical"],
+          "default": "info"
+        },
+        "file": {
+          "type": "string",
+          "description": "Optional path for log file output"
+        },
+        "json": {
+          "type": "boolean",
+          "description": "Output logs in JSON format",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "description": "Output configuration",
+      "properties": {
+        "color": {
+          "type": "string",
+          "description": "Color output policy",
+          "enum": ["auto", "always", "never"],
+          "default": "auto"
+        },
+        "no_progress": {
+          "type": "boolean",
+          "description": "Disable progress bars",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "run": {
+      "type": "object",
+      "description": "Runtime configuration",
+      "properties": {
+        "default_task": {
+          "type": "string",
+          "description": "Default task to run",
+          "default": "default"
+        },
+        "profile": {
+          "type": "string",
+          "description": "Active configuration profile",
+          "default": "default"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "description": "Timeout in seconds for operations",
+          "minimum": 1
+        },
+        "parallelism": {
+          "type": "integer",
+          "description": "Number of parallel workers",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
