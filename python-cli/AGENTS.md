@@ -113,17 +113,21 @@ This project uses GitHub Actions for automated releases. See `.github/workflows/
 
 **Creating a release:**
 ```bash
-git tag v1.0.0
-git push --tags
+# Tag-based (automatic trigger)
+git tag v1.0.0 && git push --tags
+
+# Manual trigger via CLI
+gh workflow run release.yml -f tag=v1.0.0
 ```
 
-This will:
-1. Build Python wheels and source distributions
-2. Create a GitHub release with all artifacts and checksums
-3. (If enabled) Publish to PyPI
+**What the workflow builds:**
+- Python wheels (platform-independent)
+- Source distribution (sdist)
+
+Uses `uv build` for fast, reliable builds.
 
 **Required secrets:**
-- `PYPI_API_TOKEN` - API token for PyPI publishing
+- `PYPI_API_TOKEN` - API token for PyPI publishing (uncomment publish step in workflow)
 
 **Installation methods (once published):**
 ```bash

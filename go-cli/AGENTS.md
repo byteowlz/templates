@@ -114,17 +114,26 @@ This project uses GitHub Actions for automated releases. See `.github/workflows/
 
 **Creating a release:**
 ```bash
-git tag v1.0.0
-git push --tags
+# Tag-based (automatic trigger)
+git tag v1.0.0 && git push --tags
+
+# Manual trigger via CLI
+gh workflow run release.yml -f tag=v1.0.0
 ```
 
-This will:
-1. Build binaries for Linux (x64, arm64), macOS (Intel, Apple Silicon), Windows
-2. Create a GitHub release with all artifacts and checksums
-3. (If enabled) Update Homebrew tap and Scoop bucket
+**What the workflow builds:**
+- Linux x86_64
+- Linux ARM64
+- macOS x86_64 (Intel)
+- macOS ARM64 (Apple Silicon)
+- Windows x86_64
+
+Go cross-compiles all platforms from ubuntu-latest.
 
 **Required secrets for package managers:**
 - `TAP_GITHUB_TOKEN` - PAT with repo access to byteowlz/homebrew-tap
+
+Use `byt secrets setup <repo>` to configure secrets.
 
 **Installation methods (once published):**
 ```bash

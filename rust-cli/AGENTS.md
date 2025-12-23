@@ -111,19 +111,34 @@ This project uses GitHub Actions for automated releases. See `.github/workflows/
 
 **Creating a release:**
 ```bash
-git tag v1.0.0
-git push --tags
+# Tag-based (automatic trigger)
+git tag v1.0.0 && git push --tags
+
+# Manual trigger via CLI
+gh workflow run release.yml -f tag=v1.0.0
 ```
 
-This will:
-1. Build binaries for Linux (x64, arm64), macOS (Intel, Apple Silicon), Windows
-2. Create a GitHub release with all artifacts and checksums
-3. (If enabled) Update Homebrew tap, AUR, and Scoop bucket
+**What the workflow builds:**
+- Linux x86_64 (ubuntu-latest)
+- macOS x86_64 (cross-compiled from macos-14 ARM64)
+- macOS ARM64 (macos-14)
+- Windows x86_64 (if enabled)
+
+**Disabled by default (uncomment in workflow if needed):**
+- Linux ARM64: Requires `Cross.toml` with OpenSSL configuration
+- Windows: May have C runtime mismatch issues with some crates
+
+**Platform notes:**
+- `macos-13` runner is retired - always use `macos-14`
+- For protobuf projects: uncomment the protoc installation steps
+- For ML projects: uncomment `--features coreml` for Apple Silicon
 
 **Required secrets for package managers:**
 - `TAP_GITHUB_TOKEN` - PAT with repo access to byteowlz/homebrew-tap
 - `AUR_SSH_PRIVATE_KEY` - SSH key registered with AUR
 - `AUR_EMAIL` - Email for AUR commits
+
+Use `byt secrets setup <repo>` to configure secrets.
 
 **Installation methods (once published):**
 ```bash
