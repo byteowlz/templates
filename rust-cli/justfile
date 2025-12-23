@@ -1,0 +1,121 @@
+# {{project_name}} justfile
+
+# Default recipe - show help
+default:
+    @just --list
+
+# === Development ===
+
+# Install the binary
+install:
+    cargo install --path .
+
+# Install with all features
+install-all:
+    cargo install --path . --all-features
+
+# Uninstall the binary
+uninstall:
+    cargo uninstall {{project_name}}
+
+# === Building ===
+
+# Debug build
+build:
+    cargo build
+
+# Release build
+build-release:
+    cargo build --release
+
+# Build with all features
+build-all:
+    cargo build --all-features
+
+# Fast compile check
+check:
+    cargo check
+
+# Clean build artifacts
+clean:
+    cargo clean
+
+# === Testing ===
+
+# Run tests
+test:
+    cargo test
+
+# Run tests with all features
+test-all:
+    cargo test --all-features
+
+# Run tests verbosely
+test-v:
+    cargo test -- --nocapture
+
+# === Code Quality ===
+
+# Format code
+fmt:
+    cargo fmt
+
+# Check formatting
+fmt-check:
+    cargo fmt -- --check
+
+# Run clippy
+clippy:
+    cargo clippy -- -D warnings
+
+# Alias for clippy
+lint: clippy
+
+# Auto-fix clippy warnings
+fix:
+    cargo clippy --fix --allow-dirty
+
+# Run all checks (fmt + clippy + test)
+check-all: fmt-check clippy test
+
+# === Documentation ===
+
+# Generate docs
+docs:
+    cargo doc --no-deps
+
+# Generate and open docs
+docs-open:
+    cargo doc --no-deps --open
+
+# === Dependencies ===
+
+# Update dependencies
+update:
+    cargo update
+
+# Check for outdated dependencies
+outdated:
+    cargo outdated
+
+# === Release ===
+
+# Create a release build and show binary size
+release: build-release
+    @ls -lh target/release/{{project_name}}
+
+# Tag and push a release
+release-tag VERSION:
+    git tag v{{VERSION}}
+    git push --tags
+
+# Set up GitHub secrets for automated releases (requires byt)
+setup-secrets:
+    byt secrets setup {{project_name}}
+
+# === Shell Completions ===
+
+# Generate shell completions (requires clap_complete)
+completions shell="bash":
+    @mkdir -p completions
+    cargo run -- completions {{shell}} > completions/{{project_name}}.{{shell}}

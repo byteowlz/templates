@@ -1,0 +1,19 @@
+[package]
+name = "rust-tui"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "rust-tui"
+path = "src/main.rs"
+
+[dependencies]
+rust-core.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+crossterm.workspace = true
+env_logger.workspace = true
+log.workspace = true
+ratatui.workspace = true
+serde.workspace = true
+tokio.workspace = true

@@ -1,0 +1,19 @@
+# Example configuration for python-cli.
+# Copy or symlink this file to ~/.config/python-cli/config.toml to customize.
+
+[logging]
+# Supported levels: trace, debug, info, warning, error, critical
+level = "info"
+file = ""
+json = false
+
+[output]
+# Color policies: auto, always, never
+color = "auto"
+no_progress = false
+
+[run]
+default_task = "default"
+profile = "default"
+# timeout_seconds = 60
+# parallelism = 4

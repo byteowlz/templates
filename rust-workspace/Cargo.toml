@@ -1,0 +1,51 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/rust-core",
+    "crates/rust-cli",
+    "crates/rust-tui",
+    "crates/rust-mcp",
+    "crates/rust-api",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/byteowlz/rust-workspace"
+
+[workspace.dependencies]
+# Shared across workspace
+anyhow = "1.0"
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.8"
+log = "0.4"
+env_logger = "0.11"
+config = { version = "0.15", features = ["toml"] }
+dirs = "5.0"
+shellexpand = "3.1"
+
+# CLI
+clap = { version = "4.5", features = ["derive", "env"] }
+clap_complete = "4.5"
+
+# TUI
+ratatui = "0.29"
+crossterm = "0.28"
+
+# Async runtime
+tokio = { version = "1.43", features = ["full"] }
+
+# API/HTTP
+axum = "0.8"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+
+# MCP
+rmcp = { version = "0.1", features = ["server", "transport-io"] }
+
+# Internal crates
+rust-core = { path = "crates/rust-core" }

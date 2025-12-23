@@ -1,0 +1,10 @@
+*.egg-info
+*.py[oc]
+.DS_Store
+.env 
+.venv
+.vscode/
+__pycache__/
+build/
+dist/
+wheels/

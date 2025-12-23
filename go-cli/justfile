@@ -1,0 +1,120 @@
+# {{project_name}} justfile
+
+# Default recipe - show help
+default:
+    @just --list
+
+# === Development ===
+
+# Install the binary
+install:
+    go install .
+
+# Install to a specific path
+install-to PATH:
+    go build -o {{PATH}}/{{project_name}} .
+
+# === Building ===
+
+# Debug build
+build:
+    go build .
+
+# Release build with optimizations
+build-release:
+    go build -ldflags="-s -w" -o {{project_name}} .
+
+# Build for all platforms
+build-all:
+    GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/{{project_name}}-linux-amd64 .
+    GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/{{project_name}}-darwin-amd64 .
+    GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/{{project_name}}-darwin-arm64 .
+    GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/{{project_name}}-windows-amd64.exe .
+
+# Fast compile check
+check:
+    go build ./...
+
+# Clean build artifacts
+clean:
+    go clean
+    rm -rf dist/
+
+# === Testing ===
+
+# Run tests
+test:
+    go test ./...
+
+# Run tests with verbose output
+test-v:
+    go test -v ./...
+
+# Run tests with coverage
+test-cov:
+    go test -coverprofile=coverage.out ./...
+    go tool cover -html=coverage.out -o coverage.html
+
+# Run a specific test
+test-one TEST:
+    go test -v -run {{TEST}} ./...
+
+# === Code Quality ===
+
+# Format code
+fmt:
+    go fmt ./...
+    goimports -w .
+
+# Lint code
+lint:
+    golangci-lint run
+
+# Vet code
+vet:
+    go vet ./...
+
+# Run all checks
+check-all: fmt vet test
+
+# === Dependencies ===
+
+# Tidy dependencies
+tidy:
+    go mod tidy
+
+# Update dependencies
+update:
+    go get -u ./...
+    go mod tidy
+
+# Download dependencies
+download:
+    go mod download
+
+# === Documentation ===
+
+# Generate docs
+docs:
+    go doc -all .
+
+# === Utilities ===
+
+# Show version (requires version var in main)
+version:
+    go run . --version
+
+# Run the CLI
+run *ARGS:
+    go run . {{ARGS}}
+
+# === Release ===
+
+# Tag and push a release
+release-tag VERSION:
+    git tag v{{VERSION}}
+    git push --tags
+
+# Set up GitHub secrets for automated releases (requires byt)
+setup-secrets:
+    byt secrets setup {{project_name}}

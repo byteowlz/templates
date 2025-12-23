@@ -1,0 +1,118 @@
+# {{project_name}} justfile
+
+# Default recipe - show help
+default:
+    @just --list
+
+# === Development ===
+
+# Install in development mode
+install-dev:
+    uv sync --all-extras
+
+# Install as a tool (global)
+install:
+    uv tool install .
+
+# Uninstall the tool
+uninstall:
+    uv tool uninstall {{project_name}}
+
+# === Running ===
+
+# Run the CLI
+run *ARGS:
+    uv run python -m {{project_name}} {{ARGS}}
+
+# Run with a specific command
+run-cmd CMD *ARGS:
+    uv run python -m {{project_name}} {{CMD}} {{ARGS}}
+
+# === Testing ===
+
+# Run tests
+test:
+    uv run pytest
+
+# Run tests with coverage
+test-cov:
+    uv run pytest --cov={{project_name}} --cov-report=term-missing
+
+# Run tests verbosely
+test-v:
+    uv run pytest -v
+
+# Run a specific test
+test-one TEST:
+    uv run pytest -v -k "{{TEST}}"
+
+# === Code Quality ===
+
+# Format code
+fmt:
+    uv run ruff format .
+
+# Lint code
+lint:
+    uv run ruff check .
+
+# Fix lint issues
+fix:
+    uv run ruff check --fix .
+
+# Type check
+typecheck:
+    uv run mypy {{project_name}}
+
+# Run all checks
+check: lint test
+
+# Run all checks including type checking
+check-all: lint typecheck test
+
+# === Building ===
+
+# Build the package
+build:
+    uv build
+
+# Clean build artifacts
+clean:
+    rm -rf dist/ build/ *.egg-info/
+    find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+    find . -type f -name "*.pyc" -delete 2>/dev/null || true
+
+# === Dependencies ===
+
+# Update dependencies
+update:
+    uv lock --upgrade
+
+# Add a dependency
+add DEP:
+    uv add {{DEP}}
+
+# Add a dev dependency
+add-dev DEP:
+    uv add --dev {{DEP}}
+
+# === Utilities ===
+
+# Show installed version
+version:
+    uv run python -c "from {{project_name}} import __version__; print(__version__)"
+
+# Generate requirements.txt (for compatibility)
+requirements:
+    uv pip compile pyproject.toml -o requirements.txt
+
+# === Release ===
+
+# Tag and push a release
+release-tag VERSION:
+    git tag v{{VERSION}}
+    git push --tags
+
+# Set up GitHub secrets for automated releases (requires byt)
+setup-secrets:
+    byt secrets setup {{project_name}}
