@@ -14,6 +14,8 @@ func newConfigCommand() *cobra.Command {
 
 	cmd.AddCommand(newConfigShowCommand())
 	cmd.AddCommand(newConfigPathCommand())
+	cmd.AddCommand(newConfigPathsCommand())
+	cmd.AddCommand(newConfigSchemaCommand())
 	cmd.AddCommand(newConfigResetCommand())
 
 	return cmd
@@ -43,6 +45,34 @@ func newConfigPathCommand() *cobra.Command {
 				return err
 			}
 			return app.HandleConfigPath(ctx)
+		},
+	}
+}
+
+func newConfigPathsCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "paths",
+		Short: "Print all resolved paths (config, data, state, cache).",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx, err := Context(cmd)
+			if err != nil {
+				return err
+			}
+			return app.HandleConfigPaths(ctx)
+		},
+	}
+}
+
+func newConfigSchemaCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "schema",
+		Short: "Print the JSON schema for the config file.",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx, err := Context(cmd)
+			if err != nil {
+				return err
+			}
+			return app.HandleConfigSchema(ctx)
 		},
 	}
 }

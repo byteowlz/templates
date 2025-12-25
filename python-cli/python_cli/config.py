@@ -98,6 +98,14 @@ def default_state_dir(env: Mapping[str, str] | None = None) -> Path:
     return Path(default_dirs().user_state_dir)
 
 
+def default_cache_dir(env: Mapping[str, str] | None = None) -> Path:
+    env = env or os.environ
+    base = env.get("XDG_CACHE_HOME")
+    if base:
+        return _expand_path(base, env) / APP_NAME
+    return Path(default_dirs().user_cache_dir)
+
+
 def load_config(path: Path | None, env: Mapping[str, str]) -> tuple[AppConfig, Path]:
     resolved_path = path if path is not None else default_config_path(env)
 

@@ -7,8 +7,14 @@ from typing import Any
 
 import typer
 
-from .config import config_as_dict, ensure_default_config, load_config
+from .config import (
+    config_as_dict,
+    default_cache_dir,
+    ensure_default_config,
+    load_config,
+)
 from .runtime import RuntimeContext
+
 
 @dataclass(slots=True)
 class InitOptions:
@@ -60,7 +66,45 @@ def handle_config_reset(ctx: RuntimeContext) -> None:
     ensure_default_config(ctx.config_path, force=True, env=ctx.env)
     refreshed, _ = load_config(ctx.config_path, ctx.env)
     ctx.config = refreshed
-    ctx.render("Regenerated default configuration", {"config_path": str(ctx.config_path)})
+    ctx.render(
+        "Regenerated default configuration", {"config_path": str(ctx.config_path)}
+    )
+
+
+def handle_config_paths(ctx: RuntimeContext) -> None:
+    cache_dir = default_cache_dir(ctx.env)
+    paths = {
+        "config": str(ctx.config_path),
+        "data": str(ctx.data_dir),
+        "state": str(ctx.state_dir),
+        "cache": str(cache_dir),
+    }
+    if ctx.output_format in {"json", "yaml"}:
+        ctx.render("Paths", paths)
+    else:
+        ctx.console.print(f"config: {ctx.config_path}")
+        ctx.console.print(f"data:   {ctx.data_dir}")
+        ctx.console.print(f"state:  {ctx.state_dir}")
+        ctx.console.print(f"cache:  {cache_dir}")
+
+
+def handle_config_schema(ctx: RuntimeContext) -> None:
+    schema_path = Path(__file__).parent.parent / "examples" / "config.schema.json"
+    if schema_path.exists():
+        ctx.console.print(schema_path.read_text())
+    else:
+        # Fall back to importlib.resources for installed packages
+        try:
+            from importlib.resources import files
+
+            schema = (
+                files("python_cli")
+                .joinpath("../examples/config.schema.json")
+                .read_text()
+            )
+            ctx.console.print(schema)
+        except Exception:
+            ctx.err_console.print("[red]Error:[/] config.schema.json not found")
 
 
 def handle_run(ctx: RuntimeContext, opts: RunOptions) -> None:

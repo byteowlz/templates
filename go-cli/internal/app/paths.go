@@ -159,3 +159,25 @@ func defaultStateDir(app string) (string, error) {
 	}
 	return filepath.Join(home, ".local", "state", app), nil
 }
+
+func defaultCacheDir(app string) (string, error) {
+	if dir := os.Getenv("XDG_CACHE_HOME"); dir != "" {
+		return filepath.Join(dir, app), nil
+	}
+
+	if runtime.GOOS == "windows" {
+		if dir := os.Getenv("LOCALAPPDATA"); dir != "" {
+			return filepath.Join(dir, app, "cache"), nil
+		}
+	}
+
+	if dir, err := os.UserCacheDir(); err == nil && dir != "" {
+		return filepath.Join(dir, app), nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("determine home directory: %w", err)
+	}
+	return filepath.Join(home, ".cache", app), nil
+}

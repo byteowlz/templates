@@ -85,6 +85,9 @@ struct CommonOpts {
     /// Assume "yes" for interactive prompts
     #[arg(short = 'y', long = "yes", alias = "force", global = true)]
     assume_yes: bool,
+    /// Never prompt for input; fail if confirmation would be required
+    #[arg(long = "no-input", global = true)]
+    no_input: bool,
     /// Maximum seconds to allow an operation to run
     #[arg(long = "timeout", value_name = "SECONDS", global = true)]
     timeout: Option<u64>,
@@ -147,6 +150,10 @@ enum ConfigCommand {
     Show,
     /// Print the resolved config file path
     Path,
+    /// Print all resolved paths (config, data, state, cache)
+    Paths,
+    /// Print the JSON schema for the config file
+    Schema,
     /// Regenerate the default configuration file
     Reset,
 }
@@ -434,6 +441,42 @@ fn handle_config(ctx: &RuntimeContext, command: ConfigCommand) -> Result<()> {
             println!("{}", ctx.paths.config_file.display());
             Ok(())
         }
+        ConfigCommand::Paths => {
+            let cache_dir = default_cache_dir()?;
+            if ctx.common.json {
+                let paths = serde_json::json!({
+                    "config": ctx.paths.config_file,
+                    "data": ctx.paths.data_dir,
+                    "state": ctx.paths.state_dir,
+                    "cache": cache_dir,
+                });
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&paths).context("serializing paths to JSON")?
+                );
+            } else if ctx.common.yaml {
+                let paths = serde_json::json!({
+                    "config": ctx.paths.config_file,
+                    "data": ctx.paths.data_dir,
+                    "state": ctx.paths.state_dir,
+                    "cache": cache_dir,
+                });
+                println!(
+                    "{}",
+                    serde_yaml::to_string(&paths).context("serializing paths to YAML")?
+                );
+            } else {
+                println!("config: {}", ctx.paths.config_file.display());
+                println!("data:   {}", ctx.paths.data_dir.display());
+                println!("state:  {}", ctx.paths.state_dir.display());
+                println!("cache:  {}", cache_dir.display());
+            }
+            Ok(())
+        }
+        ConfigCommand::Schema => {
+            println!("{}", include_str!("../examples/config.schema.json"));
+            Ok(())
+        }
         ConfigCommand::Reset => {
             if ctx.common.dry_run {
                 info!(
@@ -573,6 +616,21 @@ fn default_state_dir() -> Result<PathBuf> {
     dirs::home_dir()
         .map(|home| home.join(".local").join("state").join(APP_NAME))
         .ok_or_else(|| anyhow!("unable to determine state directory"))
+}
+
+fn default_cache_dir() -> Result<PathBuf> {
+    if let Some(dir) = env::var_os("XDG_CACHE_HOME").filter(|v| !v.is_empty()) {
+        return Ok(PathBuf::from(dir).join(APP_NAME));
+    }
+
+    if let Some(mut dir) = dirs::cache_dir() {
+        dir.push(APP_NAME);
+        return Ok(dir);
+    }
+
+    dirs::home_dir()
+        .map(|home| home.join(".cache").join(APP_NAME))
+        .ok_or_else(|| anyhow!("unable to determine cache directory"))
 }
 
 fn env_prefix() -> String {

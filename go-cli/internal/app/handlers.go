@@ -142,3 +142,45 @@ func HandleConfigReset(ctx *RuntimeContext) error {
 	ctx.Logger.Info("reset config at %s", ctx.Paths.ConfigFile)
 	return nil
 }
+
+// HandleConfigPaths prints all resolved paths.
+func HandleConfigPaths(ctx *RuntimeContext) error {
+	cacheDir, err := defaultCacheDir(appName)
+	if err != nil {
+		return err
+	}
+
+	paths := map[string]string{
+		"config": ctx.Paths.ConfigFile,
+		"data":   ctx.Paths.DataDir,
+		"state":  ctx.Paths.StateDir,
+		"cache":  cacheDir,
+	}
+
+	switch {
+	case ctx.Common.JSON:
+		data, err := json.MarshalIndent(paths, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(data))
+	case ctx.Common.YAML:
+		data, err := yaml.Marshal(paths)
+		if err != nil {
+			return err
+		}
+		fmt.Print(string(data))
+	default:
+		fmt.Printf("config: %s\n", ctx.Paths.ConfigFile)
+		fmt.Printf("data:   %s\n", ctx.Paths.DataDir)
+		fmt.Printf("state:  %s\n", ctx.Paths.StateDir)
+		fmt.Printf("cache:  %s\n", cacheDir)
+	}
+	return nil
+}
+
+// HandleConfigSchema prints the JSON schema for the config file.
+func HandleConfigSchema(_ *RuntimeContext) error {
+	fmt.Print(configSchemaJSON)
+	return nil
+}

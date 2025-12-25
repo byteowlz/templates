@@ -13,7 +13,9 @@ from .handlers import (
     InitOptions,
     RunOptions,
     handle_config_path,
+    handle_config_paths,
     handle_config_reset,
+    handle_config_schema,
     handle_config_show,
     handle_init,
     handle_run,
@@ -52,7 +54,9 @@ def main(
         dir_okay=False,
         writable=True,
     ),
-    quiet: bool = typer.Option(False, "--quiet", "-q", help="Reduce output to only errors."),
+    quiet: bool = typer.Option(
+        False, "--quiet", "-q", help="Reduce output to only errors."
+    ),
     verbose: int = typer.Option(
         0,
         "--verbose",
@@ -60,25 +64,39 @@ def main(
         help="Increase logging verbosity (stackable).",
         count=True,
     ),
-    debug: bool = typer.Option(False, "--debug", help="Enable debug logging (equivalent to -vv)."),
-    trace: bool = typer.Option(False, "--trace", help="Enable trace logging (overrides other levels)."),
-    json_output: bool = typer.Option(False, "--json", help="Output machine-readable JSON."),
-    yaml_output: bool = typer.Option(False, "--yaml", help="Output machine-readable YAML."),
-    no_color: bool = typer.Option(False, "--no-color", help="Disable ANSI colors in output."),
+    debug: bool = typer.Option(
+        False, "--debug", help="Enable debug logging (equivalent to -vv)."
+    ),
+    trace: bool = typer.Option(
+        False, "--trace", help="Enable trace logging (overrides other levels)."
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Output machine-readable JSON."
+    ),
+    yaml_output: bool = typer.Option(
+        False, "--yaml", help="Output machine-readable YAML."
+    ),
+    no_color: bool = typer.Option(
+        False, "--no-color", help="Disable ANSI colors in output."
+    ),
     color: str = typer.Option(
         "auto",
         "--color",
         help="Color output policy: auto, always, or never.",
         case_sensitive=False,
     ),
-    dry_run: bool = typer.Option(False, "--dry-run", help="Do not change anything on disk."),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Do not change anything on disk."
+    ),
     assume_yes: bool = typer.Option(
         False,
         "--yes",
         "-y",
         help="Assume yes for interactive prompts (alias for --force).",
     ),
-    no_progress: bool = typer.Option(False, "--no-progress", help="Disable progress indicators."),
+    no_progress: bool = typer.Option(
+        False, "--no-progress", help="Disable progress indicators."
+    ),
     diagnostics: bool = typer.Option(
         False,
         "--diagnostics",
@@ -136,7 +154,9 @@ def _runtime(ctx: Context) -> RuntimeContext:
 def run_command(
     ctx: Context,
     task: Optional[str] = typer.Argument(None, help="Optional task name to execute."),
-    profile: Optional[str] = typer.Option(None, "--profile", help="Override the profile to run under."),
+    profile: Optional[str] = typer.Option(
+        None, "--profile", help="Override the profile to run under."
+    ),
 ) -> None:
     runtime = _runtime(ctx)
     options = RunOptions(task=task or runtime.config.run.default_task, profile=profile)
@@ -146,7 +166,9 @@ def run_command(
 @app.command("init")
 def init_command(
     ctx: Context,
-    force: bool = typer.Option(False, "--force", help="Recreate configuration even if it already exists."),
+    force: bool = typer.Option(
+        False, "--force", help="Recreate configuration even if it already exists."
+    ),
 ) -> None:
     runtime = _runtime(ctx)
     handle_init(runtime, InitOptions(force=force))
@@ -170,13 +192,33 @@ def config_reset(ctx: Context) -> None:
     handle_config_reset(runtime)
 
 
+@config_app.command("paths")
+def config_paths(ctx: Context) -> None:
+    """Print all resolved paths (config, data, state, cache)."""
+    runtime = _runtime(ctx)
+    handle_config_paths(runtime)
+
+
+@config_app.command("schema")
+def config_schema(ctx: Context) -> None:
+    """Print the JSON schema for the config file."""
+    runtime = _runtime(ctx)
+    handle_config_schema(runtime)
+
+
 @app.command("completions")
 def completions(
-    shell: str = typer.Argument(..., metavar="SHELL", help=f"Shell to generate completions for ({', '.join(SHELL_CHOICES)})."),
+    shell: str = typer.Argument(
+        ...,
+        metavar="SHELL",
+        help=f"Shell to generate completions for ({', '.join(SHELL_CHOICES)}).",
+    ),
 ) -> None:
     shell = shell.lower()
     if shell not in SHELL_CHOICES:
-        raise typer.BadParameter(f"Unsupported shell: {shell}. Choose from {', '.join(SHELL_CHOICES)}.")
+        raise typer.BadParameter(
+            f"Unsupported shell: {shell}. Choose from {', '.join(SHELL_CHOICES)}."
+        )
     from typer.main import get_command
     from click.shell_completion import get_completion_class
 
