@@ -9,7 +9,7 @@ use env_logger::fmt::WriteStyle;
 use log::{LevelFilter, debug, info};
 
 use rust_core::paths::write_default_config;
-use rust_core::{AppConfig, AppPaths, default_parallelism};
+use rust_core::{AppConfig, AppPaths, default_cache_dir, default_parallelism};
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 
@@ -84,6 +84,9 @@ pub struct CommonOpts {
     /// Assume "yes" for interactive prompts
     #[arg(short = 'y', long = "yes", alias = "force", global = true)]
     pub assume_yes: bool,
+    /// Never prompt for input; fail if confirmation would be required
+    #[arg(long = "no-input", global = true)]
+    pub no_input: bool,
     /// Maximum seconds to allow an operation to run
     #[arg(long = "timeout", value_name = "SECONDS", global = true)]
     pub timeout: Option<u64>,
@@ -146,6 +149,10 @@ enum ConfigCommand {
     Show,
     /// Print the resolved config file path
     Path,
+    /// Print all resolved paths (config, data, state, cache)
+    Paths,
+    /// Print the JSON schema for the config file
+    Schema,
     /// Regenerate the default configuration file
     Reset,
 }
@@ -296,6 +303,42 @@ fn handle_config(ctx: &RuntimeContext, command: ConfigCommand) -> Result<()> {
         }
         ConfigCommand::Path => {
             println!("{}", ctx.paths.config_file.display());
+            Ok(())
+        }
+        ConfigCommand::Paths => {
+            let cache_dir = default_cache_dir()?;
+            if ctx.common.json {
+                let paths = serde_json::json!({
+                    "config": ctx.paths.config_file,
+                    "data": ctx.paths.data_dir,
+                    "state": ctx.paths.state_dir,
+                    "cache": cache_dir,
+                });
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&paths).context("serializing paths to JSON")?
+                );
+            } else if ctx.common.yaml {
+                let paths = serde_json::json!({
+                    "config": ctx.paths.config_file,
+                    "data": ctx.paths.data_dir,
+                    "state": ctx.paths.state_dir,
+                    "cache": cache_dir,
+                });
+                println!(
+                    "{}",
+                    serde_yaml::to_string(&paths).context("serializing paths to YAML")?
+                );
+            } else {
+                println!("config: {}", ctx.paths.config_file.display());
+                println!("data:   {}", ctx.paths.data_dir.display());
+                println!("state:  {}", ctx.paths.state_dir.display());
+                println!("cache:  {}", cache_dir.display());
+            }
+            Ok(())
+        }
+        ConfigCommand::Schema => {
+            println!("{}", include_str!("../../../examples/config.schema.json"));
             Ok(())
         }
         ConfigCommand::Reset => {

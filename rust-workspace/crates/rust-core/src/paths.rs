@@ -152,6 +152,22 @@ pub fn default_state_dir() -> Result<PathBuf> {
         .ok_or_else(|| anyhow!("unable to determine state directory"))
 }
 
+/// Get the default cache directory (XDG_CACHE_HOME or fallback).
+pub fn default_cache_dir() -> Result<PathBuf> {
+    if let Some(dir) = env::var_os("XDG_CACHE_HOME").filter(|v| !v.is_empty()) {
+        return Ok(PathBuf::from(dir).join(APP_NAME));
+    }
+
+    if let Some(mut dir) = dirs::cache_dir() {
+        dir.push(APP_NAME);
+        return Ok(dir);
+    }
+
+    dirs::home_dir()
+        .map(|home| home.join(".cache").join(APP_NAME))
+        .ok_or_else(|| anyhow!("unable to determine cache directory"))
+}
+
 /// Write the default configuration file to the specified path.
 pub fn write_default_config(path: &Path) -> Result<()> {
     if let Some(parent) = path.parent() {

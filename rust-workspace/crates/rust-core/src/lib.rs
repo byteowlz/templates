@@ -11,7 +11,7 @@ pub mod paths;
 
 pub use config::{AppConfig, LoggingConfig, PathsConfig, RuntimeConfig};
 pub use error::{CoreError, Result};
-pub use paths::AppPaths;
+pub use paths::{AppPaths, default_cache_dir};
 
 /// Application name used for config directories and environment prefix.
 /// Override this constant when scaffolding a new project.
