@@ -39,6 +39,7 @@ Guidance for coding agents working on this Rust CLI template.
 This project uses [just](https://github.com/casey/just) as a command runner. Run `just` to see available commands.
 
 **Core commands:**
+
 ```bash
 just              # Show available commands
 just install-all  # Install all binaries
@@ -52,6 +53,7 @@ just check-all    # Format + lint + test
 ```
 
 **Workspace navigation:**
+
 ```bash
 just list         # List all crates
 just list-bins    # List binary crates
@@ -62,6 +64,7 @@ just clippy-crate CRATE # Lint specific crate
 ```
 
 **Development workflow:**
+
 ```bash
 just check        # Fast compile check
 just fix          # Auto-fix clippy warnings
@@ -71,40 +74,43 @@ just update       # Update dependencies
 
 Always run `just check-all` before committing significant changes.
 
-## Issue Tracking (bd/beads)
+## Issue Tracking (trx)
 
-Use `bd` for all issue tracking. Do NOT use markdown TODOs or external trackers.
+Use `trx` for all issue tracking. Do NOT use markdown TODOs or external trackers.
 
 ```bash
-bd ready --json                              # Find unblocked work
-bd create "Title" -t task -p 2 --json        # Create issue (types: bug/feature/task/epic/chore)
-bd update <id> --status in_progress --json   # Claim task
-bd close <id> --reason "Done" --json         # Complete work
+trx ready --json                              # Find unblocked work
+trx create "Title" -t task -p 2 --json        # Create issue (types: bug/feature/task/epic/chore)
+trx update <id> --status in_progress --json   # Claim task
+trx close <id> --reason "Done" --json         # Complete work
 ```
 
 Priorities: 0=critical, 1=high, 2=medium (default), 3=low, 4=backlog
 
 Always commit `.beads/issues.jsonl` with code changes.
 
-## Memory System (byt/mmry)
+## Memory System (agntz memory)
 
-Use `byt memory` to store and retrieve project knowledge. Memories auto-detect the current repo.
+Use `agntz memory` to store and retrieve project knowledge. Memories auto-detect the current repo.
 
 **Adding memories:**
+
 ```bash
-byt memory add "Important decision or learning"              # Auto-detects current repo
-byt memory add "Cross-repo architecture decision" --govnr    # Force govnr store
-byt memory add "Specific insight" -c "architecture" -i 8     # With category and importance
+agntz memory add "Important decision or learning"              # Auto-detects current repo
+agntz memory add "Cross-repo architecture decision" --govnr    # Force govnr store
+agntz memory add "Specific insight" -c "architecture" -i 8     # With category and importance
 ```
 
 **Searching memories:**
+
 ```bash
-byt memory search "query"           # Search current repo's memories
-byt memory search "query" --govnr   # Search cross-repo memories
-byt memory search "query" --all     # Search ALL projects
+agntz memory search "query"           # Search current repo's memories
+agntz memory search "query" --govnr   # Search cross-repo memories
+agntz memory search "query" --all     # Search ALL projects
 ```
 
 **When to add memories:**
+
 - Architecture decisions and their rationale
 - Non-obvious solutions to tricky problems
 - Integration patterns with other byteowlz repos
@@ -112,15 +118,17 @@ byt memory search "query" --all     # Search ALL projects
 - API contracts or breaking changes
 
 **When to search memories:**
+
 - Before starting work on a feature (check for prior decisions)
 - When encountering unfamiliar code patterns
-- When integrating with other repos (`byt memory search "query" --all`)
+- When integrating with other repos (`agntz memory search "query" --all`)
 
 ## Releases & Distribution
 
 This project uses GitHub Actions for automated releases. See `.github/workflows/release.yml`.
 
 **Creating a release:**
+
 ```bash
 # Tag-based (automatic trigger)
 git tag v1.0.0 && git push --tags
@@ -130,22 +138,26 @@ gh workflow run release.yml -f tag=v1.0.0
 ```
 
 **What the workflow builds:**
+
 - Linux x86_64 (ubuntu-latest)
 - macOS x86_64 (cross-compiled from macos-14 ARM64)
 - macOS ARM64 (macos-14)
 - Windows x86_64 (if enabled)
 
 **Disabled by default (uncomment in workflow if needed):**
+
 - Linux ARM64: Requires `Cross.toml` with OpenSSL configuration
 - Windows: May have C runtime mismatch issues with some crates
 
 **Platform notes:**
+
 - `macos-13` runner is retired - always use `macos-14`
 - For protobuf projects: uncomment the protoc installation steps
 - For ML projects: uncomment `--features coreml` for Apple Silicon
 - Workspace builds package all binaries matching `{{project_name}}*`
 
 **Required secrets for package managers:**
+
 - `TAP_GITHUB_TOKEN` - PAT with repo access to byteowlz/homebrew-tap
 - `AUR_SSH_PRIVATE_KEY` - SSH key registered with AUR
 - `AUR_EMAIL` - Email for AUR commits
@@ -153,6 +165,7 @@ gh workflow run release.yml -f tag=v1.0.0
 Use `byt secrets setup <repo>` to configure secrets.
 
 **Installation methods (once published):**
+
 ```bash
 # Homebrew (macOS/Linux)
 brew install byteowlz/tap/<binary-name>
