@@ -108,6 +108,16 @@ fix:
 # Run all checks
 check-all: fmt-check clippy test
 
+# === Config Generation ===
+
+# Generate config.toml and schema from Rust structs
+generate-config:
+    cargo run -p rust-core --example generate_config
+
+# Validate that examples/ config files are up to date
+validate-config:
+    cargo test -p rust-core validate_examples_are_up_to_date
+
 # === Documentation ===
 
 # Generate docs for all crates

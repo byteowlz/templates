@@ -1,14 +1,21 @@
 use std::io::{self, Write};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
 use clap::{Args, Parser};
 use rmcp::{
-    ServerHandler, ServiceExt,
-    model::{Implementation, ServerCapabilities, ServerInfo},
-    tool,
+    ErrorData as McpError, ServerHandler, ServiceExt,
+    handler::server::tool::ToolRouter,
+    handler::server::wrapper::Parameters,
+    model::{CallToolResult, Content, ServerCapabilities, ServerInfo},
+    schemars::JsonSchema,
+    serde::{Deserialize, Serialize},
+    tool, tool_handler, tool_router,
     transport::io::stdio,
 };
+
+use rmcp::schemars;
 
 use rust_core::{AppConfig, AppPaths};
 
@@ -28,10 +35,12 @@ async fn try_main() -> Result<()> {
     let server = McpServer::new(config);
     let transport = stdio();
 
-    server
+    let service = server
         .serve(transport)
         .await
-        .map_err(|e| anyhow::anyhow!("MCP server error: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("MCP server error: {e}"))?;
+
+    service.waiting().await?;
 
     Ok(())
 }
@@ -50,49 +59,66 @@ struct CommonOpts {
     config: Option<PathBuf>,
 }
 
+/// Parameters for the echo tool
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+struct EchoParams {
+    /// The message to echo back
+    message: String,
+}
+
 #[derive(Clone)]
 struct McpServer {
-    config: AppConfig,
+    config: Arc<AppConfig>,
+    tool_router: ToolRouter<Self>,
 }
 
 impl McpServer {
     fn new(config: AppConfig) -> Self {
-        Self { config }
+        Self {
+            config: Arc::new(config),
+            tool_router: Self::tool_router(),
+        }
     }
 }
 
-#[tool(tool_box)]
+#[tool_router]
 impl McpServer {
     /// Get the current configuration profile
     #[tool(description = "Returns the current configuration profile name")]
-    async fn get_profile(&self) -> String {
-        self.config.profile.clone()
+    async fn get_profile(&self) -> Result<CallToolResult, McpError> {
+        Ok(CallToolResult::success(vec![Content::text(
+            self.config.profile.clone(),
+        )]))
     }
 
     /// Echo a message back
     #[tool(description = "Echoes the provided message back")]
-    async fn echo(&self, #[tool(param)] message: String) -> String {
-        format!("Echo: {message}")
+    async fn echo(
+        &self,
+        Parameters(params): Parameters<EchoParams>,
+    ) -> Result<CallToolResult, McpError> {
+        Ok(CallToolResult::success(vec![Content::text(format!(
+            "Echo: {}",
+            params.message
+        ))]))
     }
 
     /// Get runtime configuration
     #[tool(description = "Returns the runtime configuration including parallelism and timeout")]
-    async fn get_runtime_config(&self) -> String {
-        serde_json::to_string_pretty(&self.config.runtime).unwrap_or_else(|_| "{}".to_string())
+    async fn get_runtime_config(&self) -> Result<CallToolResult, McpError> {
+        let json = serde_json::to_string_pretty(&self.config.runtime)
+            .unwrap_or_else(|_| "{}".to_string());
+        Ok(CallToolResult::success(vec![Content::text(json)]))
     }
 }
 
-#[tool(tool_box)]
+#[tool_handler]
 impl ServerHandler for McpServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
-            protocol_version: Default::default(),
-            capabilities: ServerCapabilities::builder().enable_tools().build(),
-            server_info: Implementation {
-                name: "rust-mcp".to_string(),
-                version: env!("CARGO_PKG_VERSION").to_string(),
-            },
             instructions: Some("MCP server for rust-workspace template".to_string()),
+            capabilities: ServerCapabilities::builder().enable_tools().build(),
+            ..Default::default()
         }
     }
 }

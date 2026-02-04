@@ -1,74 +1,129 @@
 {
+  "$id": "https://github.com/byteowlz/rust-cli/schemas/config.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/byteowlz/{{project_name}}/schemas/config.schema.json",
-  "title": "{{project_name}} configuration",
-  "description": "Configuration schema for {{project_name}}",
+  "title": "rust-cli configuration",
+  "description": "Configuration schema for rust-cli",
   "type": "object",
   "properties": {
     "$schema": {
-      "type": "string",
-      "description": "JSON Schema reference for editor support"
-    },
-    "profile": {
-      "type": "string",
-      "description": "Active configuration profile",
-      "default": "default"
+      "description": "JSON Schema reference for editor support",
+      "type": "string"
     },
     "logging": {
-      "type": "object",
       "description": "Logging configuration",
-      "properties": {
-        "level": {
-          "type": "string",
-          "description": "Log level",
-          "enum": ["error", "warn", "info", "debug", "trace"],
-          "default": "info"
-        },
-        "file": {
-          "type": "string",
-          "description": "Optional path for log file output. Supports ~ and environment variables."
+      "allOf": [
+        {
+          "$ref": "#/definitions/LoggingConfig"
         }
-      },
-      "additionalProperties": false
-    },
-    "runtime": {
-      "type": "object",
-      "description": "Runtime configuration",
-      "properties": {
-        "parallelism": {
-          "type": "integer",
-          "description": "Worker pool size. Defaults to logical CPU count.",
-          "minimum": 1
-        },
-        "timeout": {
-          "type": "integer",
-          "description": "Timeout in seconds for long-running operations",
-          "default": 60,
-          "minimum": 1
-        },
-        "fail_fast": {
-          "type": "boolean",
-          "description": "Stop on first error",
-          "default": true
-        }
-      },
-      "additionalProperties": false
+      ],
+      "default": {
+        "file": null,
+        "level": "info"
+      }
     },
     "paths": {
-      "type": "object",
-      "description": "Custom paths for data and state",
-      "properties": {
-        "data_dir": {
-          "type": "string",
-          "description": "Directory for persistent data. Supports ~ and environment variables."
-        },
-        "state_dir": {
-          "type": "string",
-          "description": "Directory for state files. Supports ~ and environment variables."
+      "description": "Directory path overrides",
+      "allOf": [
+        {
+          "$ref": "#/definitions/PathsConfig"
         }
-      },
-      "additionalProperties": false
+      ],
+      "default": {
+        "data_dir": null,
+        "state_dir": null
+      }
+    },
+    "profile": {
+      "description": "Active configuration profile name",
+      "type": "string",
+      "default": "default"
+    },
+    "runtime": {
+      "description": "Runtime behavior configuration",
+      "allOf": [
+        {
+          "$ref": "#/definitions/RuntimeConfig"
+        }
+      ],
+      "default": {
+        "fail_fast": true,
+        "parallelism": null,
+        "timeout": 60
+      }
     }
   },
-  "additionalProperties": false
+  "definitions": {
+    "LoggingConfig": {
+      "description": "Logging configuration.",
+      "type": "object",
+      "properties": {
+        "file": {
+          "description": "Optional file path to write logs to",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "level": {
+          "description": "Log level (trace, debug, info, warn, error)",
+          "type": "string",
+          "default": "info"
+        }
+      }
+    },
+    "PathsConfig": {
+      "description": "Directory path overrides.",
+      "type": "object",
+      "properties": {
+        "data_dir": {
+          "description": "Override the data directory path",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "state_dir": {
+          "description": "Override the state directory path",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    },
+    "RuntimeConfig": {
+      "description": "Runtime behavior configuration.",
+      "type": "object",
+      "properties": {
+        "fail_fast": {
+          "description": "Stop on first error instead of continuing",
+          "type": "boolean",
+          "default": true
+        },
+        "parallelism": {
+          "description": "Number of parallel tasks (defaults to CPU count)",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint",
+          "default": null,
+          "minimum": 0
+        },
+        "timeout": {
+          "description": "Default timeout in seconds for operations",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "default": 60,
+          "minimum": 0
+        }
+      }
+    }
+  }
 }

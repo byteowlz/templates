@@ -4,19 +4,41 @@ use std::path::Path;
 
 use anyhow::Result;
 use config::{Config, Environment, File, FileFormat};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::paths::{expand_str_path, write_default_config};
-use crate::{AppPaths, default_parallelism, env_prefix};
+use crate::{default_parallelism, env_prefix, AppPaths};
 
 /// Main application configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
+#[schemars(
+    title = "Application Configuration",
+    description = "Main configuration for the application"
+)]
 pub struct AppConfig {
+    /// JSON Schema reference for editor support.
+    #[serde(rename = "$schema", default, skip_serializing_if = "Option::is_none")]
+    #[schemars(skip)]
+    pub schema: Option<String>,
+
+    /// Active configuration profile.
+    #[schemars(default = "default_profile")]
     pub profile: String,
+
+    /// Logging configuration.
     pub logging: LoggingConfig,
+
+    /// Runtime behavior configuration.
     pub runtime: RuntimeConfig,
+
+    /// Custom paths for data and state directories.
     pub paths: PathsConfig,
+}
+
+fn default_profile() -> String {
+    "default".to_string()
 }
 
 impl AppConfig {
@@ -75,6 +97,7 @@ impl AppConfig {
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
+            schema: None,
             profile: "default".to_string(),
             logging: LoggingConfig::default(),
             runtime: RuntimeConfig::default(),
@@ -84,28 +107,72 @@ impl Default for AppConfig {
 }
 
 /// Logging configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
+#[schemars(description = "Logging configuration")]
 pub struct LoggingConfig {
-    pub level: String,
+    /// Log level (error, warn, info, debug, trace).
+    #[schemars(default = "default_log_level")]
+    pub level: LogLevel,
+
+    /// Optional path for log file output. Supports ~ and environment variables.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub file: Option<String>,
+}
+
+/// Log level enumeration for schema validation.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum LogLevel {
+    Error,
+    Warn,
+    #[default]
+    Info,
+    Debug,
+    Trace,
+}
+
+impl std::fmt::Display for LogLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Error => write!(f, "error"),
+            Self::Warn => write!(f, "warn"),
+            Self::Info => write!(f, "info"),
+            Self::Debug => write!(f, "debug"),
+            Self::Trace => write!(f, "trace"),
+        }
+    }
+}
+
+fn default_log_level() -> LogLevel {
+    LogLevel::Info
 }
 
 impl Default for LoggingConfig {
     fn default() -> Self {
         Self {
-            level: "info".to_string(),
+            level: LogLevel::Info,
             file: None,
         }
     }
 }
 
 /// Runtime behavior configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
+#[schemars(description = "Runtime behavior configuration")]
 pub struct RuntimeConfig {
+    /// Worker pool size. Defaults to logical CPU count when unset.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 1))]
     pub parallelism: Option<usize>,
+
+    /// Timeout in seconds for long-running operations (default: 60).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 1))]
     pub timeout: Option<u64>,
+
+    /// Stop on first error.
     pub fail_fast: bool,
 }
 
@@ -120,9 +187,15 @@ impl Default for RuntimeConfig {
 }
 
 /// Path override configuration.
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
+#[schemars(description = "Custom paths for data and state directories")]
 pub struct PathsConfig {
+    /// Directory for persistent data. Supports ~ and environment variables.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub data_dir: Option<String>,
+
+    /// Directory for state files. Supports ~ and environment variables.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub state_dir: Option<String>,
 }

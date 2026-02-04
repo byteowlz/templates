@@ -3,15 +3,18 @@
 //! This crate provides:
 //! - Configuration loading and management
 //! - XDG-compliant path resolution
+//! - Schema and example config generation
 //! - Common types and error handling
 
 pub mod config;
 pub mod error;
 pub mod paths;
+pub mod schema;
 
-pub use config::{AppConfig, LoggingConfig, PathsConfig, RuntimeConfig};
+pub use config::{AppConfig, LogLevel, LoggingConfig, PathsConfig, RuntimeConfig};
 pub use error::{CoreError, Result};
 pub use paths::{AppPaths, default_cache_dir};
+pub use schema::{generate_example_config, generate_schema, write_generated_files};
 
 /// Application name used for config directories and environment prefix.
 /// Override this constant when scaffolding a new project.

@@ -4,15 +4,17 @@ use std::fs;
 use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
 use config::{Config, Environment, File, FileFormat};
 use env_logger::fmt::WriteStyle;
-use log::{LevelFilter, debug, info};
+use log::{debug, info, LevelFilter};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
+const REPO_URL: &str = "https://github.com/byteowlz/rust-cli";
 
 fn main() {
     if let Err(err) = try_main() {
@@ -302,13 +304,17 @@ impl AppPaths {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
-struct AppConfig {
-    profile: String,
-    logging: LoggingConfig,
-    runtime: RuntimeConfig,
-    paths: PathsConfig,
+pub struct AppConfig {
+    /// Active configuration profile name
+    pub profile: String,
+    /// Logging configuration
+    pub logging: LoggingConfig,
+    /// Runtime behavior configuration
+    pub runtime: RuntimeConfig,
+    /// Directory path overrides
+    pub paths: PathsConfig,
 }
 
 impl AppConfig {
@@ -331,11 +337,13 @@ impl Default for AppConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
-struct LoggingConfig {
-    level: String,
-    file: Option<String>,
+pub struct LoggingConfig {
+    /// Log level (trace, debug, info, warn, error)
+    pub level: String,
+    /// Optional file path to write logs to
+    pub file: Option<String>,
 }
 
 impl Default for LoggingConfig {
@@ -347,12 +355,15 @@ impl Default for LoggingConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
-struct RuntimeConfig {
-    parallelism: Option<usize>,
-    timeout: Option<u64>,
-    fail_fast: bool,
+pub struct RuntimeConfig {
+    /// Number of parallel tasks (defaults to CPU count)
+    pub parallelism: Option<usize>,
+    /// Default timeout in seconds for operations
+    pub timeout: Option<u64>,
+    /// Stop on first error instead of continuing
+    pub fail_fast: bool,
 }
 
 impl Default for RuntimeConfig {
@@ -365,11 +376,13 @@ impl Default for RuntimeConfig {
     }
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
-struct PathsConfig {
-    data_dir: Option<String>,
-    state_dir: Option<String>,
+pub struct PathsConfig {
+    /// Override the data directory path
+    pub data_dir: Option<String>,
+    /// Override the state directory path
+    pub state_dir: Option<String>,
 }
 
 fn handle_run(ctx: &mut RuntimeContext, cmd: RunCommand) -> Result<()> {
@@ -474,7 +487,8 @@ fn handle_config(ctx: &RuntimeContext, command: ConfigCommand) -> Result<()> {
             Ok(())
         }
         ConfigCommand::Schema => {
-            println!("{}", include_str!("../examples/config.schema.json"));
+            let schema = generate_schema(APP_NAME, REPO_URL)?;
+            println!("{schema}");
             Ok(())
         }
         ConfigCommand::Reset => {
@@ -650,6 +664,11 @@ fn default_parallelism() -> usize {
     std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(1)
+}
+
+// Re-use schema generation from library
+fn generate_schema(project_name: &str, repo_url: &str) -> Result<String> {
+    rust_cli::generate_schema(project_name, repo_url)
 }
 
 impl fmt::Display for AppPaths {

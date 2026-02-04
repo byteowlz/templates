@@ -21,11 +21,11 @@ thiserror = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
-toml = "0.8"
+toml = "0.9"
 log = "0.4"
 env_logger = "0.11"
 config = { version = "0.15", features = ["toml"] }
-dirs = "5.0"
+dirs = "6.0"
 shellexpand = "3.1"
 
 # CLI
@@ -33,11 +33,11 @@ clap = { version = "4.5", features = ["derive", "env"] }
 clap_complete = "4.5"
 
 # TUI
-ratatui = "0.29"
-crossterm = "0.28"
+ratatui = "0.30"
+crossterm = "0.29"
 
 # Async runtime
-tokio = { version = "1.43", features = ["full"] }
+tokio = { version = "1.49", features = ["full"] }
 
 # API/HTTP
 axum = "0.8"
@@ -45,7 +45,10 @@ tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace"] }
 
 # MCP
-rmcp = { version = "0.1", features = ["server", "transport-io"] }
+rmcp = { version = "0.14", features = ["server", "transport-io"] }
+
+# Schema generation
+schemars = "1.2"
 
 # Internal crates
 rust-core = { path = "crates/rust-core" }
