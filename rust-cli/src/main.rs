@@ -1,40 +1,41 @@
+//! rust-cli: A batteries-included template for building Rust CLIs.
+
 use std::env;
 use std::fmt;
 use std::fs;
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, IsTerminal};
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use clap::{Args, CommandFactory, Parser, Subcommand, ValueEnum};
 use clap_complete::Shell;
-use config::{Config, Environment, File, FileFormat};
 use env_logger::fmt::WriteStyle;
-use log::{debug, info, LevelFilter};
+use log::{LevelFilter, debug, info};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 const REPO_URL: &str = "https://github.com/byteowlz/rust-cli";
 
-fn main() {
-    if let Err(err) = try_main() {
-        let _ = writeln!(io::stderr(), "{err:?}");
-        std::process::exit(1);
-    }
+fn main() -> anyhow::Result<()> {
+    try_main()
 }
 
 fn try_main() -> Result<()> {
     let cli = Cli::parse();
 
-    let mut ctx = RuntimeContext::new(cli.common.clone())?;
+    let ctx = RuntimeContext::new(cli.common.clone())?;
     ctx.init_logging()?;
     debug!("resolved paths: {:#?}", ctx.paths);
 
     match cli.command {
-        Command::Run(cmd) => handle_run(&mut ctx, cmd),
+        Command::Run(cmd) => handle_run(&ctx, cmd),
         Command::Init(cmd) => handle_init(&ctx, cmd),
         Command::Config { command } => handle_config(&ctx, command),
-        Command::Completions { shell } => handle_completions(shell),
+        Command::Completions { shell } => {
+            handle_completions(shell);
+            Ok(())
+        }
     }
 }
 
@@ -52,62 +53,67 @@ struct Cli {
     command: Command,
 }
 
+/// Common CLI options shared across all subcommands.
 #[derive(Debug, Clone, Args)]
-struct CommonOpts {
+pub struct CommonOpts {
     /// Override the config file path
     #[arg(long, value_name = "PATH", global = true)]
-    config: Option<PathBuf>,
+    pub config: Option<PathBuf>,
     /// Reduce output to only errors
     #[arg(short, long, action = clap::ArgAction::SetTrue, global = true)]
-    quiet: bool,
+    pub quiet: bool,
     /// Increase logging verbosity (stackable)
     #[arg(short = 'v', long = "verbose", action = clap::ArgAction::Count, global = true)]
-    verbose: u8,
+    pub verbose: u8,
     /// Enable debug logging (equivalent to -vv)
     #[arg(long, global = true)]
-    debug: bool,
+    pub debug: bool,
     /// Enable trace logging (overrides other levels)
     #[arg(long, global = true)]
-    trace: bool,
+    pub trace: bool,
     /// Output machine readable JSON
     #[arg(long, global = true, conflicts_with = "yaml")]
-    json: bool,
+    pub json: bool,
     /// Output machine readable YAML
     #[arg(long, global = true)]
-    yaml: bool,
+    pub yaml: bool,
     /// Disable ANSI colors in output
     #[arg(long = "no-color", global = true, conflicts_with = "color")]
-    no_color: bool,
+    pub no_color: bool,
     /// Control color output (auto, always, never)
     #[arg(long, value_enum, default_value_t = ColorOption::Auto, global = true)]
-    color: ColorOption,
+    pub color: ColorOption,
     /// Do not change anything on disk
     #[arg(long = "dry-run", global = true)]
-    dry_run: bool,
+    pub dry_run: bool,
     /// Assume "yes" for interactive prompts
     #[arg(short = 'y', long = "yes", alias = "force", global = true)]
-    assume_yes: bool,
+    pub assume_yes: bool,
     /// Never prompt for input; fail if confirmation would be required
     #[arg(long = "no-input", global = true)]
-    no_input: bool,
+    pub no_input: bool,
     /// Maximum seconds to allow an operation to run
     #[arg(long = "timeout", value_name = "SECONDS", global = true)]
-    timeout: Option<u64>,
+    pub timeout: Option<u64>,
     /// Override the degree of parallelism
     #[arg(long = "parallel", value_name = "N", global = true)]
-    parallel: Option<usize>,
+    pub parallel: Option<usize>,
     /// Disable progress indicators
     #[arg(long = "no-progress", global = true)]
-    no_progress: bool,
+    pub no_progress: bool,
     /// Emit additional diagnostics for troubleshooting
     #[arg(long = "diagnostics", global = true)]
-    diagnostics: bool,
+    pub diagnostics: bool,
 }
 
+/// Color output mode.
 #[derive(Debug, Clone, Copy, ValueEnum)]
-enum ColorOption {
+pub enum ColorOption {
+    /// Detect terminal capabilities automatically.
     Auto,
+    /// Always emit ANSI color codes.
     Always,
+    /// Never emit ANSI color codes.
     Never,
 }
 
@@ -139,14 +145,14 @@ struct RunCommand {
     profile: Option<String>,
 }
 
-#[derive(Debug, Clone, Args)]
+#[derive(Debug, Clone, Copy, Args)]
 struct InitCommand {
     /// Recreate configuration even if it already exists
     #[arg(long = "force")]
     force: bool,
 }
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Clone, Copy, Subcommand)]
 enum ConfigCommand {
     /// Output the effective configuration
     Show,
@@ -169,8 +175,8 @@ struct RuntimeContext {
 
 impl RuntimeContext {
     fn new(common: CommonOpts) -> Result<Self> {
-        let mut paths = AppPaths::discover(common.config.clone())?;
-        let config = load_or_init_config(&mut paths, &common)?;
+        let paths = AppPaths::discover(common.config.clone())?;
+        let config = load_or_init_config(&paths, &common)?;
         let paths = paths.apply_overrides(&config)?;
         let ctx = Self {
             common,
@@ -221,7 +227,7 @@ impl RuntimeContext {
         })
     }
 
-    fn effective_log_level(&self) -> LevelFilter {
+    const fn effective_log_level(&self) -> LevelFilter {
         if self.common.trace {
             LevelFilter::Trace
         } else if self.common.debug {
@@ -258,66 +264,22 @@ impl RuntimeContext {
     }
 }
 
-#[derive(Debug, Clone)]
-struct AppPaths {
-    config_file: PathBuf,
-    data_dir: PathBuf,
-    state_dir: PathBuf,
-}
-
-impl AppPaths {
-    fn discover(override_path: Option<PathBuf>) -> Result<Self> {
-        let config_file = match override_path {
-            Some(path) => {
-                let expanded = expand_path(path)?;
-                if expanded.is_dir() {
-                    expanded.join("config.toml")
-                } else {
-                    expanded
-                }
-            }
-            None => default_config_dir()?.join("config.toml"),
-        };
-
-        if config_file.parent().is_none() {
-            return Err(anyhow!("invalid config file path: {config_file:?}"));
-        }
-
-        let data_dir = default_data_dir()?;
-        let state_dir = default_state_dir()?;
-
-        Ok(Self {
-            config_file,
-            data_dir,
-            state_dir,
-        })
-    }
-
-    fn apply_overrides(mut self, cfg: &AppConfig) -> Result<Self> {
-        if let Some(ref data_override) = cfg.paths.data_dir {
-            self.data_dir = expand_str_path(data_override)?;
-        }
-        if let Some(ref state_override) = cfg.paths.state_dir {
-            self.state_dir = expand_str_path(state_override)?;
-        }
-        Ok(self)
-    }
-}
-
+/// Application configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 pub struct AppConfig {
-    /// Active configuration profile name
+    /// Active configuration profile name.
     pub profile: String,
-    /// Logging configuration
+    /// Logging configuration.
     pub logging: LoggingConfig,
-    /// Runtime behavior configuration
+    /// Runtime behavior configuration.
     pub runtime: RuntimeConfig,
-    /// Directory path overrides
+    /// Directory path overrides.
     pub paths: PathsConfig,
 }
 
 impl AppConfig {
+    #[must_use]
     fn with_profile_override(mut self, profile: Option<String>) -> Self {
         if let Some(profile) = profile {
             self.profile = profile;
@@ -337,12 +299,13 @@ impl Default for AppConfig {
     }
 }
 
+/// Logging configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 pub struct LoggingConfig {
-    /// Log level (trace, debug, info, warn, error)
+    /// Log level (trace, debug, info, warn, error).
     pub level: String,
-    /// Optional file path to write logs to
+    /// Optional file path to write logs to.
     pub file: Option<String>,
 }
 
@@ -355,14 +318,15 @@ impl Default for LoggingConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+/// Runtime behavior configuration.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 pub struct RuntimeConfig {
-    /// Number of parallel tasks (defaults to CPU count)
+    /// Number of parallel tasks (defaults to CPU count).
     pub parallelism: Option<usize>,
-    /// Default timeout in seconds for operations
+    /// Default timeout in seconds for operations.
     pub timeout: Option<u64>,
-    /// Stop on first error instead of continuing
+    /// Stop on first error instead of continuing.
     pub fail_fast: bool,
 }
 
@@ -376,16 +340,17 @@ impl Default for RuntimeConfig {
     }
 }
 
+/// Directory path overrides.
 #[derive(Debug, Default, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 pub struct PathsConfig {
-    /// Override the data directory path
+    /// Override the data directory path.
     pub data_dir: Option<String>,
-    /// Override the state directory path
+    /// Override the state directory path.
     pub state_dir: Option<String>,
 }
 
-fn handle_run(ctx: &mut RuntimeContext, cmd: RunCommand) -> Result<()> {
+fn handle_run(ctx: &RuntimeContext, cmd: RunCommand) -> Result<()> {
     let effective = ctx.config.clone().with_profile_override(cmd.profile);
     let output = if ctx.common.json {
         serde_json::to_string_pretty(&effective).context("serializing run output to JSON")?
@@ -403,12 +368,7 @@ fn handle_run(ctx: &mut RuntimeContext, cmd: RunCommand) -> Result<()> {
         )
     };
 
-    if ctx.common.json || ctx.common.yaml {
-        println!("{}", output);
-    } else {
-        println!("{output}");
-    }
-
+    println!("{output}");
     Ok(())
 }
 
@@ -504,13 +464,12 @@ fn handle_config(ctx: &RuntimeContext, command: ConfigCommand) -> Result<()> {
     }
 }
 
-fn handle_completions(shell: Shell) -> Result<()> {
+fn handle_completions(shell: Shell) {
     let mut cmd = Cli::command();
     clap_complete::generate(shell, &mut cmd, APP_NAME, &mut io::stdout());
-    Ok(())
 }
 
-fn load_or_init_config(paths: &mut AppPaths, common: &CommonOpts) -> Result<AppConfig> {
+fn load_or_init_config(paths: &AppPaths, common: &CommonOpts) -> Result<AppConfig> {
     if !paths.config_file.exists() {
         if common.dry_run {
             info!(
@@ -523,44 +482,45 @@ fn load_or_init_config(paths: &mut AppPaths, common: &CommonOpts) -> Result<AppC
     }
 
     let env_prefix = env_prefix();
-    let built = Config::builder()
+    let built = config::Config::builder()
         .set_default("profile", "default")?
         .set_default("logging.level", "info")?
         .set_default("runtime.parallelism", default_parallelism() as i64)?
         .set_default("runtime.timeout", 60_i64)?
         .set_default("runtime.fail_fast", true)?
         .add_source(
-            File::from(paths.config_file.as_path())
-                .format(FileFormat::Toml)
+            config::File::from(paths.config_file.as_path())
+                .format(config::FileFormat::Toml)
                 .required(false),
         )
-        .add_source(Environment::with_prefix(env_prefix.as_str()).separator("__"))
+        .add_source(config::Environment::with_prefix(env_prefix.as_str()).separator("__"))
         .build()?;
 
-    let mut config: AppConfig = built.try_deserialize()?;
+    let mut app_config: AppConfig = built.try_deserialize()?;
 
-    if let Some(ref file) = config.logging.file {
+    if let Some(ref file) = app_config.logging.file {
         let expanded = expand_str_path(file)?;
-        config.logging.file = Some(expanded.display().to_string());
+        app_config.logging.file = Some(expanded.display().to_string());
     }
 
-    Ok(config)
+    Ok(app_config)
 }
 
 fn write_default_config(path: &Path) -> Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
-            .with_context(|| format!("creating config directory {parent:?}"))?;
+            .with_context(|| format!("creating config directory {}", parent.display()))?;
     }
 
-    let config = AppConfig::default();
-    let toml = toml::to_string_pretty(&config).context("serializing default config to TOML")?;
-    let mut body = default_config_header(path)?;
+    let app_config = AppConfig::default();
+    let toml =
+        toml::to_string_pretty(&app_config).context("serializing default config to TOML")?;
+    let mut body = default_config_header(path);
     body.push_str(&toml);
     fs::write(path, body).with_context(|| format!("writing config file to {}", path.display()))
 }
 
-fn default_config_header(path: &Path) -> Result<String> {
+fn default_config_header(path: &Path) -> String {
     let mut buffer = String::new();
     buffer.push_str("# Configuration for ");
     buffer.push_str(APP_NAME);
@@ -569,15 +529,61 @@ fn default_config_header(path: &Path) -> Result<String> {
     buffer.push_str(&path.display().to_string());
     buffer.push('\n');
     buffer.push('\n');
-    Ok(buffer)
+    buffer
 }
 
-fn expand_path(path: PathBuf) -> Result<PathBuf> {
-    if let Some(text) = path.to_str() {
-        expand_str_path(text)
-    } else {
-        Ok(path)
+#[derive(Debug, Clone)]
+struct AppPaths {
+    config_file: PathBuf,
+    data_dir: PathBuf,
+    state_dir: PathBuf,
+}
+
+impl AppPaths {
+    fn discover(override_path: Option<PathBuf>) -> Result<Self> {
+        let config_file = match override_path {
+            Some(path) => {
+                let expanded = expand_path(&path)?;
+                if expanded.is_dir() {
+                    expanded.join("config.toml")
+                } else {
+                    expanded
+                }
+            }
+            None => default_config_dir()?.join("config.toml"),
+        };
+
+        if config_file.parent().is_none() {
+            return Err(anyhow!(
+                "invalid config file path: {}",
+                config_file.display()
+            ));
+        }
+
+        let data_dir = default_data_dir()?;
+        let state_dir = default_state_dir()?;
+
+        Ok(Self {
+            config_file,
+            data_dir,
+            state_dir,
+        })
     }
+
+    fn apply_overrides(mut self, cfg: &AppConfig) -> Result<Self> {
+        if let Some(ref data_override) = cfg.paths.data_dir {
+            self.data_dir = expand_str_path(data_override)?;
+        }
+        if let Some(ref state_override) = cfg.paths.state_dir {
+            self.state_dir = expand_str_path(state_override)?;
+        }
+        Ok(self)
+    }
+}
+
+fn expand_path(path: &Path) -> Result<PathBuf> {
+    path.to_str()
+        .map_or_else(|| Ok(path.to_path_buf()), expand_str_path)
 }
 
 fn expand_str_path(text: &str) -> Result<PathBuf> {
@@ -662,8 +668,7 @@ fn env_prefix() -> String {
 
 fn default_parallelism() -> usize {
     std::thread::available_parallelism()
-        .map(|n| n.get())
-        .unwrap_or(1)
+        .map_or(1, std::num::NonZero::get)
 }
 
 // Re-use schema generation from library

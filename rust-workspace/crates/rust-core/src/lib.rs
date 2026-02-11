@@ -21,6 +21,7 @@ pub use schema::{generate_example_config, generate_schema, write_generated_files
 pub const APP_NAME: &str = "rust-workspace";
 
 /// Returns the environment variable prefix for this application.
+#[must_use]
 pub fn env_prefix() -> String {
     APP_NAME
         .chars()
@@ -35,8 +36,8 @@ pub fn env_prefix() -> String {
 }
 
 /// Returns the default parallelism based on available CPU cores.
+#[must_use]
 pub fn default_parallelism() -> usize {
     std::thread::available_parallelism()
-        .map(|n| n.get())
-        .unwrap_or(1)
+        .map_or(1, std::num::NonZero::get)
 }

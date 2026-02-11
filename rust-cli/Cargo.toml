@@ -2,6 +2,11 @@
 name = "rust-cli"
 version = "0.1.0"
 edition = "2024"
+description = "A batteries-included template for building Rust CLIs"
+license = "MIT"
+repository = "https://github.com/byteowlz/rust-cli"
+keywords = ["cli", "template"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 anyhow = "1.0.100"
@@ -21,3 +26,81 @@ toml = "0.9.11"
 [[example]]
 name = "generate_config"
 path = "examples/generate_config.rs"
+
+# ============================================
+# MAXIMUM PRESET - rust-magic-linter
+# ============================================
+# Everything at deny level - maximum strictness
+# https://github.com/vicnaum/rust-magic-linter
+
+[lints.rust]
+# Safety - forbid means even #![allow(...)] can't override
+unsafe_code = "forbid"
+non_ascii_idents = "forbid"
+
+# Quality enforcement
+warnings = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+future_incompatible = { level = "deny", priority = -1 }
+nonstandard_style = { level = "deny", priority = -1 }
+
+# Documentation enforcement
+missing_docs = "deny"
+missing_debug_implementations = "deny"
+missing_copy_implementations = "deny"
+unfulfilled_lint_expectations = "deny"
+
+[lints.rustdoc]
+all = { level = "deny", priority = -1 }
+
+[lints.clippy]
+# === ALL LINT GROUPS AT DENY ===
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+cargo = { level = "deny", priority = -1 }
+
+# === THE GUARDRAILS ===
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+panic_in_result_fn = "deny"
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+
+# Code hygiene
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+
+# === ASYNC SAFETY ===
+await_holding_lock = "deny"
+large_futures = "deny"
+
+# === PROCESS/MEMORY SAFETY ===
+exit = "deny"
+mem_forget = "deny"
+
+# === PERFORMANCE ===
+large_stack_arrays = "deny"
+large_types_passed_by_value = "deny"
+
+# === MINIMAL RELAXATIONS ===
+# Only the absolutely necessary ones
+multiple_crate_versions = "allow"   # Unavoidable with transitive deps
+
+# Cast lints - too many false positives even for strict projects
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+cast_possible_wrap = "allow"
+
+# Nursery lints that have too many false positives
+cognitive_complexity = "allow"      # Use clippy.toml threshold instead
+
+# CLI templates need stdout/stderr output
+print_stdout = "allow"              # CLIs need to print to stdout
+print_stderr = "allow"              # CLIs need to print to stderr
+
+# CLI option structs inherently have many boolean flags
+struct_excessive_bools = "allow"    # CLI flag structs have many bools

@@ -1,4 +1,6 @@
-use std::io::{self, Write};
+//! TUI interface for rust-workspace.
+
+use std::io;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -20,16 +22,13 @@ use ratatui::{
 
 use rust_core::{AppConfig, AppPaths};
 
-fn main() {
-    if let Err(err) = try_main() {
-        let _ = writeln!(io::stderr(), "{err:?}");
-        std::process::exit(1);
-    }
+fn main() -> anyhow::Result<()> {
+    try_main()
 }
 
 fn try_main() -> Result<()> {
     let cli = Cli::parse();
-    let paths = AppPaths::discover(cli.common.config)?;
+    let paths = AppPaths::discover(cli.common.config.as_deref())?;
     let config = AppConfig::load(&paths, false)?;
 
     enable_raw_mode()?;
@@ -66,17 +65,26 @@ struct CommonOpts {
     config: Option<PathBuf>,
 }
 
+/// Application mode for keyboard input routing.
 #[derive(Debug)]
 enum AppMode {
+    /// Normal navigation mode.
     Normal,
+    /// Help overlay is visible.
     Help,
 }
 
+/// Application state for the TUI.
 struct App {
+    /// Loaded application configuration.
     config: AppConfig,
+    /// Current input mode.
     mode: AppMode,
+    /// Index of the currently selected item.
     selected_index: usize,
+    /// List of items to display.
     items: Vec<String>,
+    /// Message shown in the status bar.
     status_message: String,
 }
 
@@ -97,7 +105,7 @@ impl App {
         }
     }
 
-    fn next(&mut self) {
+    const fn next(&mut self) {
         if !self.items.is_empty() {
             self.selected_index = (self.selected_index + 1) % self.items.len();
         }
@@ -136,8 +144,8 @@ where
                     _ => {}
                 },
                 AppMode::Help => match key.code {
-                    KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('?') => {
-                        app.mode = AppMode::Normal
+                    KeyCode::Esc | KeyCode::Char('q' | '?') => {
+                        app.mode = AppMode::Normal;
                     }
                     _ => {}
                 },
@@ -146,7 +154,7 @@ where
     }
 }
 
-fn ui(f: &mut Frame, app: &App) {
+fn ui(f: &mut Frame<'_>, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(0), Constraint::Length(1)])
@@ -171,7 +179,7 @@ fn ui(f: &mut Frame, app: &App) {
     }
 }
 
-fn draw_left_pane(f: &mut Frame, _app: &App, area: Rect) {
+fn draw_left_pane(f: &mut Frame<'_>, _app: &App, area: Rect) {
     let block = Block::default().title(" Navigation ").borders(Borders::ALL);
     let items = vec![
         ListItem::new("All"),
@@ -182,9 +190,9 @@ fn draw_left_pane(f: &mut Frame, _app: &App, area: Rect) {
     f.render_widget(list, area);
 }
 
-fn draw_middle_pane(f: &mut Frame, app: &App, area: Rect) {
+fn draw_middle_pane(f: &mut Frame<'_>, app: &App, area: Rect) {
     let block = Block::default().title(" Items ").borders(Borders::ALL);
-    let items: Vec<ListItem> = app
+    let items: Vec<ListItem<'_>> = app
         .items
         .iter()
         .enumerate()
@@ -203,7 +211,7 @@ fn draw_middle_pane(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(list, area);
 }
 
-fn draw_right_pane(f: &mut Frame, app: &App, area: Rect) {
+fn draw_right_pane(f: &mut Frame<'_>, app: &App, area: Rect) {
     let block = Block::default().title(" Details ").borders(Borders::ALL);
     let content = if app.selected_index < app.items.len() {
         format!(
@@ -217,7 +225,7 @@ fn draw_right_pane(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(paragraph, area);
 }
 
-fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
+fn draw_status_bar(f: &mut Frame<'_>, app: &App, area: Rect) {
     let mode_indicator = match app.mode {
         AppMode::Normal => Span::styled(
             " NORMAL ",
@@ -238,7 +246,7 @@ fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(Paragraph::new(status), area);
 }
 
-fn draw_help_overlay(f: &mut Frame) {
+fn draw_help_overlay(f: &mut Frame<'_>) {
     let area = centered_rect(60, 60, f.area());
     let block = Block::default()
         .title(" Help ")

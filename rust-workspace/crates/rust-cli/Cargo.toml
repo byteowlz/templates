@@ -2,6 +2,15 @@
 name = "rust-cli"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "CLI interface for the rust-workspace template"
+
+[lints]
+workspace = true
 
 [[bin]]
 name = "rust-cli"

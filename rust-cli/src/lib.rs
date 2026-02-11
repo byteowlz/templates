@@ -3,6 +3,7 @@
 //! This module provides functions to generate JSON schemas and example TOML
 //! configurations from the config struct definitions.
 
+use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
 
@@ -23,13 +24,13 @@ pub const CONFIG_FILENAME: &str = "config.toml";
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 pub struct AppConfig {
-    /// Active configuration profile name
+    /// Active configuration profile name.
     pub profile: String,
-    /// Logging configuration
+    /// Logging configuration.
     pub logging: LoggingConfig,
-    /// Runtime behavior configuration
+    /// Runtime behavior configuration.
     pub runtime: RuntimeConfig,
-    /// Directory path overrides
+    /// Directory path overrides.
     pub paths: PathsConfig,
 }
 
@@ -48,9 +49,9 @@ impl Default for AppConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 pub struct LoggingConfig {
-    /// Log level (trace, debug, info, warn, error)
+    /// Log level (trace, debug, info, warn, error).
     pub level: String,
-    /// Optional file path to write logs to
+    /// Optional file path to write logs to.
     pub file: Option<String>,
 }
 
@@ -64,14 +65,14 @@ impl Default for LoggingConfig {
 }
 
 /// Runtime behavior configuration.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 pub struct RuntimeConfig {
-    /// Number of parallel tasks (defaults to CPU count)
+    /// Number of parallel tasks (defaults to CPU count).
     pub parallelism: Option<usize>,
-    /// Default timeout in seconds for operations
+    /// Default timeout in seconds for operations.
     pub timeout: Option<u64>,
-    /// Stop on first error instead of continuing
+    /// Stop on first error instead of continuing.
     pub fail_fast: bool,
 }
 
@@ -89,13 +90,17 @@ impl Default for RuntimeConfig {
 #[derive(Debug, Default, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 pub struct PathsConfig {
-    /// Override the data directory path
+    /// Override the data directory path.
     pub data_dir: Option<String>,
-    /// Override the state directory path
+    /// Override the state directory path.
     pub state_dir: Option<String>,
 }
 
-/// Generate the JSON schema for AppConfig using schemars.
+/// Generate the JSON schema for `AppConfig` using schemars.
+///
+/// # Errors
+///
+/// Returns an error if JSON serialization fails.
 pub fn generate_schema(project_name: &str, repo_url: &str) -> Result<String> {
     // Use draft-07 for better TOML editor support
     let settings = SchemaSettings::draft07();
@@ -117,22 +122,26 @@ pub fn generate_schema(project_name: &str, repo_url: &str) -> Result<String> {
     );
 
     // Add $schema property for LSP/editor support
-    if let Some(props) = schema.get_mut("properties") {
-        if let Some(props_obj) = props.as_object_mut() {
-            props_obj.insert(
-                "$schema".to_string(),
-                json!({
-                    "type": "string",
-                    "description": "JSON Schema reference for editor support"
-                }),
-            );
-        }
+    if let Some(props) = schema.get_mut("properties")
+        && let Some(props_obj) = props.as_object_mut()
+    {
+        props_obj.insert(
+            "$schema".to_string(),
+            json!({
+                "type": "string",
+                "description": "JSON Schema reference for editor support"
+            }),
+        );
     }
 
     serde_json::to_string_pretty(&schema).context("serializing JSON schema")
 }
 
-/// Generate the example TOML configuration from the default AppConfig.
+/// Generate the example TOML configuration from the default `AppConfig`.
+///
+/// # Errors
+///
+/// Returns an error if TOML serialization fails.
 pub fn generate_example_config(project_name: &str) -> Result<String> {
     let schema_url = format!(
         "https://raw.githubusercontent.com/byteowlz/schemas/refs/heads/main/{project_name}/{project_name}.config.schema.json"
@@ -145,20 +154,25 @@ pub fn generate_example_config(project_name: &str) -> Result<String> {
 
     // Build output with schema reference and header
     let mut output = String::new();
-    output.push_str(&format!(
+    let _ = write!(
+        output,
         r#""$schema" = "{schema_url}"
 
 # Configuration for {project_name}.
 # Copy this file to $XDG_CONFIG_HOME/{project_name}/config.toml and adjust as needed.
 
 "#
-    ));
+    );
     output.push_str(&toml_body);
 
     Ok(output)
 }
 
 /// Write generated files to a directory.
+///
+/// # Errors
+///
+/// Returns an error if directory creation or file writing fails.
 pub fn write_generated_files(output_dir: &Path, project_name: &str, repo_url: &str) -> Result<()> {
     fs::create_dir_all(output_dir)
         .with_context(|| format!("creating output directory: {}", output_dir.display()))?;
@@ -177,7 +191,10 @@ pub fn write_generated_files(output_dir: &Path, project_name: &str, repo_url: &s
 }
 
 /// Compare generated files against existing files in a directory.
-/// Returns Ok(()) if they match, Err with diff details if they differ.
+///
+/// # Errors
+///
+/// Returns an error if files differ or cannot be read.
 pub fn validate_against_examples(
     examples_dir: &Path,
     project_name: &str,

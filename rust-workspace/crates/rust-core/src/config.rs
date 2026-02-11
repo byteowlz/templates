@@ -43,6 +43,7 @@ fn default_profile() -> String {
 
 impl AppConfig {
     /// Override the profile if a value is provided.
+    #[must_use]
     pub fn with_profile_override(mut self, profile: Option<String>) -> Self {
         if let Some(profile) = profile {
             self.profile = profile;
@@ -51,6 +52,10 @@ impl AppConfig {
     }
 
     /// Load configuration from file and environment, creating defaults if needed.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the config file cannot be read, parsed, or written.
     pub fn load(paths: &AppPaths, dry_run: bool) -> Result<Self> {
         if !paths.config_file.exists() {
             if dry_run {
@@ -67,6 +72,10 @@ impl AppConfig {
     }
 
     /// Load configuration from a specific path.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the config file cannot be read or parsed.
     pub fn load_from_path(config_file: &Path) -> Result<Self> {
         let env_prefix = env_prefix();
         let built = Config::builder()
@@ -83,7 +92,7 @@ impl AppConfig {
             .add_source(Environment::with_prefix(env_prefix.as_str()).separator("__"))
             .build()?;
 
-        let mut config: AppConfig = built.try_deserialize()?;
+        let mut config: Self = built.try_deserialize()?;
 
         if let Some(ref file) = config.logging.file {
             let expanded = expand_str_path(file)?;
@@ -121,14 +130,19 @@ pub struct LoggingConfig {
 }
 
 /// Log level enumeration for schema validation.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum LogLevel {
+    /// Only emit error-level messages.
     Error,
+    /// Emit warnings and errors.
     Warn,
+    /// Emit informational messages and above (default).
     #[default]
     Info,
+    /// Emit debug diagnostics and above.
     Debug,
+    /// Emit all messages including fine-grained traces.
     Trace,
 }
 
@@ -144,7 +158,7 @@ impl std::fmt::Display for LogLevel {
     }
 }
 
-fn default_log_level() -> LogLevel {
+const fn default_log_level() -> LogLevel {
     LogLevel::Info
 }
 
@@ -158,7 +172,7 @@ impl Default for LoggingConfig {
 }
 
 /// Runtime behavior configuration.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 #[schemars(description = "Runtime behavior configuration")]
 pub struct RuntimeConfig {

@@ -1,4 +1,5 @@
-use std::io::{self, Write};
+//! MCP server for rust-workspace.
+
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -19,17 +20,14 @@ use rmcp::schemars;
 
 use rust_core::{AppConfig, AppPaths};
 
-fn main() {
-    if let Err(err) = try_main() {
-        let _ = writeln!(io::stderr(), "{err:?}");
-        std::process::exit(1);
-    }
+fn main() -> anyhow::Result<()> {
+    try_main()
 }
 
 #[tokio::main]
 async fn try_main() -> Result<()> {
     let cli = Cli::parse();
-    let paths = AppPaths::discover(cli.common.config)?;
+    let paths = AppPaths::discover(cli.common.config.as_deref())?;
     let config = AppConfig::load(&paths, false)?;
 
     let server = McpServer::new(config);

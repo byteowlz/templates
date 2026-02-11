@@ -1,5 +1,7 @@
+//! CLI interface for rust-workspace.
+
 use std::env;
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, IsTerminal};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result, anyhow};
@@ -13,25 +15,25 @@ use rust_core::{AppConfig, AppPaths, default_cache_dir, default_parallelism};
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 
-fn main() {
-    if let Err(err) = try_main() {
-        let _ = writeln!(io::stderr(), "{err:?}");
-        std::process::exit(1);
-    }
+fn main() -> anyhow::Result<()> {
+    try_main()
 }
 
 fn try_main() -> Result<()> {
     let cli = Cli::parse();
 
-    let mut ctx = RuntimeContext::new(cli.common.clone())?;
+    let ctx = RuntimeContext::new(cli.common.clone())?;
     ctx.init_logging()?;
     debug!("resolved paths: {:#?}", ctx.paths);
 
     match cli.command {
-        Command::Run(cmd) => handle_run(&mut ctx, cmd),
+        Command::Run(cmd) => handle_run(&ctx, cmd),
         Command::Init(cmd) => handle_init(&ctx, cmd),
         Command::Config { command } => handle_config(&ctx, command),
-        Command::Completions { shell } => handle_completions(shell),
+        Command::Completions { shell } => {
+            handle_completions(shell);
+            Ok(())
+        }
     }
 }
 
@@ -49,6 +51,7 @@ struct Cli {
     command: Command,
 }
 
+/// Common CLI options shared across all subcommands.
 #[derive(Debug, Clone, Args)]
 pub struct CommonOpts {
     /// Override the config file path
@@ -101,10 +104,14 @@ pub struct CommonOpts {
     pub diagnostics: bool,
 }
 
+/// Color output mode.
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum ColorOption {
+    /// Detect terminal capabilities automatically.
     Auto,
+    /// Always emit ANSI color codes.
     Always,
+    /// Never emit ANSI color codes.
     Never,
 }
 
@@ -136,14 +143,14 @@ struct RunCommand {
     profile: Option<String>,
 }
 
-#[derive(Debug, Clone, Args)]
+#[derive(Debug, Clone, Copy, Args)]
 struct InitCommand {
     /// Recreate configuration even if it already exists
     #[arg(long = "force")]
     force: bool,
 }
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Clone, Copy, Subcommand)]
 enum ConfigCommand {
     /// Output the effective configuration
     Show,
@@ -166,7 +173,7 @@ struct RuntimeContext {
 
 impl RuntimeContext {
     fn new(common: CommonOpts) -> Result<Self> {
-        let paths = AppPaths::discover(common.config.clone())?;
+        let paths = AppPaths::discover(common.config.as_deref())?;
         let config = AppConfig::load(&paths, common.dry_run)?;
         let paths = paths.apply_overrides(&config)?;
         let ctx = Self {
@@ -218,7 +225,7 @@ impl RuntimeContext {
         })
     }
 
-    fn effective_log_level(&self) -> LevelFilter {
+    const fn effective_log_level(&self) -> LevelFilter {
         if self.common.trace {
             LevelFilter::Trace
         } else if self.common.debug {
@@ -241,7 +248,7 @@ impl RuntimeContext {
     }
 }
 
-fn handle_run(ctx: &mut RuntimeContext, cmd: RunCommand) -> Result<()> {
+fn handle_run(ctx: &RuntimeContext, cmd: RunCommand) -> Result<()> {
     let effective = ctx.config.clone().with_profile_override(cmd.profile);
     let output = if ctx.common.json {
         serde_json::to_string_pretty(&effective).context("serializing run output to JSON")?
@@ -354,8 +361,7 @@ fn handle_config(ctx: &RuntimeContext, command: ConfigCommand) -> Result<()> {
     }
 }
 
-fn handle_completions(shell: Shell) -> Result<()> {
+fn handle_completions(shell: Shell) {
     let mut cmd = Cli::command();
     clap_complete::generate(shell, &mut cmd, APP_NAME, &mut io::stdout());
-    Ok(())
 }

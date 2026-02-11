@@ -1,4 +1,5 @@
-use std::io::{self, Write};
+//! HTTP API server for rust-workspace.
+
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -13,11 +14,8 @@ use tower_http::trace::TraceLayer;
 
 use rust_core::{AppConfig, AppPaths};
 
-fn main() {
-    if let Err(err) = try_main() {
-        let _ = writeln!(io::stderr(), "{err:?}");
-        std::process::exit(1);
-    }
+fn main() -> anyhow::Result<()> {
+    try_main()
 }
 
 #[tokio::main]
@@ -25,7 +23,7 @@ async fn try_main() -> Result<()> {
     env_logger::init();
 
     let cli = Cli::parse();
-    let paths = AppPaths::discover(cli.common.config)?;
+    let paths = AppPaths::discover(cli.common.config.as_deref())?;
     let config = AppConfig::load(&paths, false)?;
 
     let state = AppState {
@@ -46,7 +44,7 @@ async fn try_main() -> Result<()> {
         .with_state(state);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], cli.common.port));
-    info!("Starting API server on {}", addr);
+    info!("Starting API server on {addr}");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
