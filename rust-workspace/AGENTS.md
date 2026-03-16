@@ -1,19 +1,99 @@
 # AGENTS.md
 
-Guidance for coding agents working on this Rust CLI template.
+Guidance for coding agents working on this Rust workspace template.
+
+## Workspace Map
+
+```
+Cargo.toml              # Workspace root: all deps pinned here, lint config
+crates/
+  rust-core/            # Shared library (the only lib crate)
+    src/config.rs       #   AppConfig, LoggingConfig, RuntimeConfig, PathsConfig
+    src/paths.rs        #   AppPaths, XDG resolution, write_default_config
+    src/error.rs        #   CoreError, Result type alias
+    src/schema.rs       #   JSON schema + example config generation & validation
+    src/lib.rs          #   Public re-exports, APP_NAME const, env_prefix(), default_parallelism()
+    examples/generate_config.rs  # Regenerates examples/ files from structs
+  rust-cli/             # CLI binary (clap derive, subcommands)
+  rust-tui/             # TUI binary (ratatui, crossterm)
+  rust-mcp/             # MCP server binary (rmcp 1.2, stdio transport)
+  rust-api/             # HTTP API binary (axum 0.8, tower-http)
+examples/
+  config.toml           # Generated example config (kept in sync by test)
+  config.schema.json    # Generated JSON schema (kept in sync by test)
+clippy.toml             # Clippy thresholds (complexity, doc-valid-idents)
+justfile                # Task runner commands
+release.toml            # cargo-release config (publish=false, push=false)
+TUI.md                  # TUI architecture patterns reference
+```
+
+**Dependency flow**: All four binaries depend on `rust-core`. No binary depends on another binary.
 
 ## Core Principles
 
 - **Never publish** artifacts to public registries without explicit user approval.
 - We favor clean refactors over backwards compatibility; update existing code in place (no `FooV2` suffixes).
 - Target Windows 11, Linux, and macOS 14+ with the same behavior; no legacy OS shims.
-- Keep file headers minimal—no author or timestamp banners.
+- Keep file headers minimal — no author or timestamp banners.
 
 ## Rust Workflow
 
 - Follow Clippy best practices: collapse trivial `if`s, inline `format!` arguments, and prefer method references over redundant closures.
 - When tests compare structures, assert on the full value instead of individual fields.
 - Run `cargo fmt` after code changes and `cargo test` for the touched crate. Invoke broader test or lint commands only if the user asks.
+
+## Strict Lint Configuration
+
+The workspace uses **maximum-strictness Clippy lints** (see `[workspace.lints.clippy]` in root `Cargo.toml`). Key constraints:
+
+- `unsafe_code = "forbid"` — no unsafe anywhere
+- `unwrap_used`, `expect_used`, `panic` = "deny" — use `?`, `anyhow::Result`, or `ok_or_else`
+- `allow_attributes` = "deny" — cannot add `#[allow(...)]` to suppress warnings
+- `dbg_macro`, `todo`, `unimplemented` = "deny" — no placeholder code
+- `exit` = "deny" — return errors from `main()` instead
+- `print_stdout/print_stderr` = "allow" — CLIs/TUIs/APIs need output
+
+**When adding new code**: use `anyhow::Result<()>` for fallible functions, propagate errors with `?`, use `.context("message")?` for better error messages. Never `unwrap()`.
+
+## Config Schema Workflow
+
+When you modify `AppConfig` or any config struct in `rust-core/src/config.rs`:
+
+1. Run `just generate-config` to regenerate `examples/config.toml` and `examples/config.schema.json`
+2. The test `validate_examples_are_up_to_date` will fail if you forget this step
+3. Run `just test` to verify
+
+## Common Agent Tasks
+
+### Adding a new CLI subcommand
+
+1. Add a variant to the `Command` enum in `crates/rust-cli/src/main.rs`
+2. Add a corresponding `#[derive(Debug, Args)]` struct for its arguments
+3. Add a `handle_*` function and wire it in `try_main()`
+4. Support `--json`/`--yaml` output in the handler
+
+### Adding a new MCP tool
+
+1. Add a method to the `#[tool_router] impl McpServer` block in `crates/rust-mcp/src/main.rs`
+2. Use `#[tool(description = "...")]` attribute
+3. Define a params struct with `#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]`
+4. Accept params as `Parameters(params): Parameters<YourParams>`
+5. Return `Result<CallToolResult, McpError>`
+6. The tool is auto-registered via the `tool_router` macro — no manual registration needed
+
+### Adding a new API endpoint
+
+1. Add a handler function in `crates/rust-api/src/main.rs`
+2. Add the route in the `Router::new()` chain
+3. Use `State(state): State<AppState>` to access config
+
+### Adding a config field
+
+1. Add the field to the appropriate struct in `crates/rust-core/src/config.rs`
+2. Add `#[schemars(...)]` annotations for schema metadata
+3. Set a default in the `Default` impl
+4. Run `just generate-config` to update example files
+5. Run `just test` to verify
 
 ## CLI Expectations
 
@@ -22,15 +102,27 @@ Guidance for coding agents working on this Rust CLI template.
 - Offer `--dry-run`, `--yes/--force`, `--no-progress`, `--timeout`, and `--parallel` when operations warrant them.
 - Generate help quickly (`-h/--help`) and provide shell completions off the same Clap definitions.
 
+## MCP Crate (rmcp 1.2)
+
+The MCP server uses the official `rmcp` crate (Rust SDK for Model Context Protocol).
+
+**Key patterns:**
+- `#[tool_router]` on impl block auto-generates tool routing
+- `#[tool_handler]` on `ServerHandler` impl wires tools into the server
+- `ServerInfo` is non-exhaustive — use `let mut info = ServerInfo::default(); info.field = value;`
+- Transport: `rmcp::transport::io::stdio()` for stdio-based MCP
+- Re-exports: `rmcp::schemars::JsonSchema` and `rmcp::serde::{Serialize, Deserialize}` are available
+
 ## Configuration & Storage
 
 - Use XDG directories when available: config at `$XDG_CONFIG_HOME/<app>/config.toml`, data at `$XDG_DATA_HOME/<app>`, state at `$XDG_STATE_HOME/<app>` with sensible fallbacks (e.g., `~/.config`).
 - Expand `~` and environment variables in config paths.
 - Ship a commented example under `examples/`, create a default config on first run, and load overrides via the `config` crate.
+- Environment variable override prefix: `RUST_WORKSPACE__` (double underscore for nesting, e.g., `RUST_WORKSPACE__LOGGING__LEVEL=debug`).
 
 ## House Rules
 
-- Do exactly what the user asks—no unsolicited files or docs.
+- Do exactly what the user asks — no unsolicited files or docs.
 - Keep README updates concise, emoji-free, and only when requested.
 - Never commit secrets or sensitive paths; scrub logs before surfacing them.
 

@@ -4,7 +4,7 @@
 
 use std::path::PathBuf;
 
-use rust_core::{write_generated_files, APP_NAME};
+use rust_core::{APP_NAME, write_generated_files};
 
 /// Repository URL for schema $id.
 const REPO_URL: &str = "https://github.com/byteowlz/rust-workspace";

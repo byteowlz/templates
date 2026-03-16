@@ -1,0 +1,47 @@
+{
+  "todos": [
+    {
+      "id": "1",
+      "content": "Survey current crate code (all 5 crates)",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "2",
+      "content": "Research latest official MCP Rust SDK",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "3",
+      "content": "Update dependencies to latest versions",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "4",
+      "content": "Fix MCP crate to use official SDK",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "5",
+      "content": "Fix compilation errors across all crates",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "6",
+      "content": "Improve AI agent ergonomics",
+      "status": "completed",
+      "priority": "medium"
+    },
+    {
+      "id": "7",
+      "content": "Run check-all and verify everything compiles",
+      "status": "completed",
+      "priority": "high"
+    }
+  ],
+  "updated_at": "2026-03-16T07:42:12.749Z"
+}

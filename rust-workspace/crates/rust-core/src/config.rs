@@ -8,7 +8,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::paths::{expand_str_path, write_default_config};
-use crate::{default_parallelism, env_prefix, AppPaths};
+use crate::{AppPaths, default_parallelism, env_prefix};
 
 /// Main application configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

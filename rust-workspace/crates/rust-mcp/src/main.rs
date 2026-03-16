@@ -104,8 +104,8 @@ impl McpServer {
     /// Get runtime configuration
     #[tool(description = "Returns the runtime configuration including parallelism and timeout")]
     async fn get_runtime_config(&self) -> Result<CallToolResult, McpError> {
-        let json = serde_json::to_string_pretty(&self.config.runtime)
-            .unwrap_or_else(|_| "{}".to_string());
+        let json =
+            serde_json::to_string_pretty(&self.config.runtime).unwrap_or_else(|_| "{}".to_string());
         Ok(CallToolResult::success(vec![Content::text(json)]))
     }
 }
@@ -113,10 +113,9 @@ impl McpServer {
 #[tool_handler]
 impl ServerHandler for McpServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo {
-            instructions: Some("MCP server for rust-workspace template".to_string()),
-            capabilities: ServerCapabilities::builder().enable_tools().build(),
-            ..Default::default()
-        }
+        let mut info = ServerInfo::default();
+        info.instructions = Some("MCP server for rust-workspace template".to_string());
+        info.capabilities = ServerCapabilities::builder().enable_tools().build();
+        info
     }
 }
