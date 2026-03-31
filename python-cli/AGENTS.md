@@ -138,3 +138,13 @@ uv tool install <package-name>
 # From GitHub release
 uv pip install https://github.com/byteowlz/<repo>/releases/download/v1.0.0/<package>-1.0.0-py3-none-any.whl
 ```
+
+---
+
+## Supply Chain Security
+
+- **Release quarantine**: `uv.toml` sets `exclude-newer = "7 days"` so uv never installs package versions published less than 7 days ago. Most supply chain attacks are caught within hours; this buys time.
+- **Lock files**: `uv.lock` is committed and pins exact versions. Always commit lock file changes.
+- **Minimal dependencies**: Favour standard library before adding third-party packages.
+- **Audit regularly**: Run `uv pip audit` or `pip-audit` to check for known vulnerabilities.
+- Never use `pip` directly; always use `uv add`, `uv pip`, or `uv tool install`.

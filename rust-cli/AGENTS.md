@@ -152,3 +152,12 @@ yay -S <binary-name>
 scoop bucket add byteowlz https://github.com/byteowlz/scoop-bucket
 scoop install <binary-name>
 ```
+
+---
+
+## Supply Chain Security
+
+- **Lock files**: `Cargo.lock` is committed and pins exact versions. Always commit lock file changes.
+- **Audit regularly**: Run `cargo audit` to check for known vulnerabilities in dependencies.
+- **Vet crates**: Consider `cargo-vet` to track which crates have been reviewed.
+- **Minimal dependencies**: Favour std library before adding third-party crates. Rust crates have no install scripts (lower risk than npm/PyPI), but transitive deps still matter.

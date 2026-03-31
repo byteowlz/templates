@@ -144,3 +144,12 @@ brew install byteowlz/tap/<binary-name>
 scoop bucket add byteowlz https://github.com/byteowlz/scoop-bucket
 scoop install <binary-name>
 ```
+
+---
+
+## Supply Chain Security
+
+- **Lock files**: `go.sum` provides cryptographic verification of module contents. Always commit it.
+- **Audit regularly**: Run `govulncheck ./...` to check for known vulnerabilities.
+- **Minimal dependencies**: Favour standard library before adding third-party modules. Go's module proxy and checksum database (`sum.golang.org`) provide strong integrity guarantees.
+- **GONOSUMCHECK/GONOSUMDB**: Never set these unless absolutely necessary; they bypass integrity checks.
