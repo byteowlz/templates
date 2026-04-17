@@ -120,6 +120,7 @@ See `examples/config.toml` for all options.
 ```bash
 cargo fmt                                    # Format code
 cargo clippy --all-targets --all-features   # Lint
+sg scan --config .ast-grep/sgconfig.yml     # ast-grep Rust guardrails
 cargo test                                   # Run tests
 cargo build --release                        # Release build
 ```

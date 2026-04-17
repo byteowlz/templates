@@ -1,1 +1,4 @@
-exclude-newer = "7 days"
+# Supply chain security: refuse packages published less than 7 days ago.
+# Update this date periodically (or use a CI script to set it to "now - 7 days").
+# Format: RFC 3339 timestamp. uv does not support relative dates.
+# exclude-newer = "2026-03-24T00:00:00Z"

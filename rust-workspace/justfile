@@ -97,6 +97,10 @@ clippy:
 # Alias for clippy
 lint: clippy
 
+# Run ast-grep guardrails for Rust sources
+lint-rust-ai-guardrails:
+    sg scan --config .ast-grep/sgconfig.yml
+
 # Clippy on a specific crate
 clippy-crate CRATE:
     cargo clippy -p {{CRATE}} -- -D warnings
@@ -106,7 +110,7 @@ fix:
     cargo clippy --workspace --fix --allow-dirty
 
 # Run all checks
-check-all: fmt-check clippy test
+check-all: fmt-check clippy lint-rust-ai-guardrails test
 
 # === Config Generation ===
 

@@ -71,12 +71,16 @@ clippy:
 # Alias for clippy
 lint: clippy
 
+# Run ast-grep guardrails for Rust sources
+lint-rust-ai-guardrails:
+    sg scan --config .ast-grep/sgconfig.yml
+
 # Auto-fix clippy warnings
 fix:
     cargo clippy --fix --allow-dirty
 
-# Run all checks (fmt + clippy + test)
-check-all: fmt-check clippy test
+# Run all checks (fmt + clippy + ast-grep + test)
+check-all: fmt-check clippy lint-rust-ai-guardrails test
 
 # === Documentation ===
 

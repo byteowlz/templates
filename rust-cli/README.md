@@ -73,10 +73,11 @@ Global flags apply to every subcommand, enabling quiet mode, stacked verbosity (
   cargo test
   ```
 
-- Recommended lint pass during active development:
+- Recommended lint passes during active development:
 
   ```bash
   cargo clippy --all-targets --all-features
+  sg scan --config .ast-grep/sgconfig.yml
   ```
 
 - Generate completions for your shell:
