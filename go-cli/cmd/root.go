@@ -43,6 +43,10 @@ func init() {
 				return err
 			}
 
+			if err := flags.ValidateLogFormat(); err != nil {
+				return err
+			}
+
 			rtx, err := app.NewRuntimeContext(cmd.Context(), flags)
 			if err != nil {
 				return err
@@ -61,6 +65,7 @@ func init() {
 	pflags.BoolVar(&commonFlags.Trace, "trace", false, "Enable trace logging (overrides other levels).")
 	pflags.BoolVar(&commonFlags.JSON, "json", false, "Output machine-readable JSON.")
 	pflags.BoolVar(&commonFlags.YAML, "yaml", false, "Output machine-readable YAML.")
+	pflags.StringVar(&commonFlags.LogFormat, "log-format", "auto", "Log output format: auto, text, or json (auto = json when stderr is not a terminal).")
 	pflags.BoolVar(&commonFlags.NoColor, "no-color", false, "Disable ANSI colors in output.")
 	pflags.StringVar(&commonFlags.Color, "color", "auto", "Color output policy: auto, always, or never.")
 	pflags.BoolVar(&commonFlags.DryRun, "dry-run", false, "Do not change anything on disk.")

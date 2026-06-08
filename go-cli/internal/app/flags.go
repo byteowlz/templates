@@ -11,6 +11,7 @@ type CommonFlags struct {
 	Trace          bool
 	JSON           bool
 	YAML           bool
+	LogFormat      string
 	NoColor        bool
 	Color          string
 	DryRun         bool
@@ -28,5 +29,15 @@ func (c *CommonFlags) ValidateColor() error {
 		return nil
 	default:
 		return fmt.Errorf("invalid --color value %q (expected auto, always, or never)", c.Color)
+	}
+}
+
+// ValidateLogFormat ensures the log-format flag uses a supported value.
+func (c *CommonFlags) ValidateLogFormat() error {
+	switch c.LogFormat {
+	case "", "auto", "text", "json":
+		return nil
+	default:
+		return fmt.Errorf("invalid --log-format value %q (expected auto, text, or json)", c.LogFormat)
 	}
 }

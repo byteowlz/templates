@@ -29,12 +29,12 @@ This repository provides a batteries-included starting point for building cross-
 
 ## Features
 
-- Cobra-powered command interface with shared global flags (`-q`, `-v`, `--debug`, `--trace`, `--json`, `--yaml`, `--no-color`, `--dry-run`, `--yes`).
+- Cobra-powered command interface with shared global flags (`-q`, `-v`, `--debug`, `--trace`, `--json`, `--yaml`, `--log-format`, `--no-color`, `--dry-run`, `--yes`).
 - Viper-based configuration loader that creates `$XDG_CONFIG_HOME/go-cli/config.toml` (or platform equivalents) on first run.
 - Environment overrides using the `GO_CLI__*` prefix; e.g. `GO_CLI__LOGGING__LEVEL=debug`.
 - Configurable data and state directories that honor XDG locations on Unix and the appropriate directories on Windows.
 - Shell completion generation via `go run . -- completions <shell>`.
-- Lightweight structured logging with color-aware console output and optional log file mirroring.
+- Lightweight structured logging with color-aware console output and optional log file mirroring. Emits pretty text on a terminal and unified JSON Lines (`{time, level, msg}`) when piped — auto-detected, or forced with `--log-format text|json`. See [`../LOGGING.md`](../LOGGING.md) for the shared cross-language format.
 - `scripts/new-cli.sh` to clone the template with a new module name and paths.
 
 ## CLI Overview

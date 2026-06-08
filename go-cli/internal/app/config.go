@@ -39,6 +39,12 @@ const configSchemaJSON = `{
           "enum": ["error", "warn", "info", "debug", "trace"],
           "default": "info"
         },
+        "format": {
+          "type": "string",
+          "description": "Log output format",
+          "enum": ["auto", "text", "json"],
+          "default": "auto"
+        },
         "file": {
           "type": "string",
           "description": "Optional path for log file output. Supports ~ and environment variables."
@@ -99,8 +105,9 @@ type AppConfig struct {
 
 // LoggingConfig controls log output.
 type LoggingConfig struct {
-	Level string `mapstructure:"level" json:"level" yaml:"level"`
-	File  string `mapstructure:"file" json:"file" yaml:"file"`
+	Level  string `mapstructure:"level" json:"level" yaml:"level"`
+	Format string `mapstructure:"format" json:"format" yaml:"format"`
+	File   string `mapstructure:"file" json:"file" yaml:"file"`
 }
 
 // RuntimeConfig contains runtime tuning parameters.
@@ -147,6 +154,7 @@ func LoadOrInitConfig(paths AppPaths, flags CommonFlags) (AppConfig, error) {
 
 	v.SetDefault("profile", cfg.Profile)
 	v.SetDefault("logging.level", cfg.Logging.Level)
+	v.SetDefault("logging.format", cfg.Logging.Format)
 	v.SetDefault("runtime.timeout", 60)
 	v.SetDefault("runtime.fail_fast", true)
 
@@ -215,6 +223,9 @@ func defaultConfigBody() string {
 [logging]
 # Valid levels: error, warn, info, debug, trace
 level = "info"
+# Output format: auto, text, or json.
+# "auto" emits pretty text on a terminal and JSON Lines when piped/redirected.
+format = "auto"
 # Optional path for log file output; supports ~ and environment variables.
 # file = "~/Library/Logs/` + appName + `.log"
 
@@ -237,7 +248,8 @@ func defaultConfig() AppConfig {
 	return AppConfig{
 		Profile: "default",
 		Logging: LoggingConfig{
-			Level: "info",
+			Level:  "info",
+			Format: "auto",
 		},
 		Runtime: RuntimeConfig{
 			TimeoutSeconds: &defaultTimeout,

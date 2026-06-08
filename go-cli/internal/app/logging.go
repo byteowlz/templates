@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -20,9 +21,20 @@ const (
 	LevelTrace
 )
 
+// LogFormat selects the on-the-wire encoding of log records.
+type LogFormat int
+
+const (
+	// FormatText renders human-readable, optionally colorized lines.
+	FormatText LogFormat = iota
+	// FormatJSON renders one JSON object per line (JSON Lines).
+	FormatJSON
+)
+
 // LogSettings control how the logger behaves.
 type LogSettings struct {
 	Level       Level
+	Format      LogFormat
 	Diagnostics bool
 	Colorize    bool
 	Writers     []io.Writer
@@ -90,6 +102,11 @@ func (l Logger) log(level Level, msg string, args ...any) {
 
 func formatMessage(level Level, settings LogSettings, msg string, args ...any) string {
 	body := fmt.Sprintf(msg, args...)
+
+	if settings.Format == FormatJSON {
+		return formatJSON(level, body)
+	}
+
 	levelLabel, color := levelAttributes(level)
 
 	if settings.Colorize && color != "" {
@@ -102,6 +119,46 @@ func formatMessage(level Level, settings LogSettings, msg string, args ...any) s
 	}
 
 	return fmt.Sprintf("%-5s %s", levelLabel, body)
+}
+
+// jsonRecord is the unified cross-language log schema. Field order is fixed so
+// output is byte-stable: time (RFC3339), level (lowercase), msg.
+type jsonRecord struct {
+	Time  string `json:"time"`
+	Level string `json:"level"`
+	Msg   string `json:"msg"`
+}
+
+func formatJSON(level Level, body string) string {
+	encoded, err := json.Marshal(jsonRecord{
+		Time:  time.Now().Format(time.RFC3339),
+		Level: levelName(level),
+		Msg:   body,
+	})
+	if err != nil {
+		// json.Marshal of plain strings cannot fail in practice; fall back to a
+		// minimal hand-built record so a log line is never silently dropped.
+		return fmt.Sprintf(`{"time":%q,"level":%q,"msg":"<unencodable log message>"}`,
+			time.Now().Format(time.RFC3339), levelName(level))
+	}
+	return string(encoded)
+}
+
+func levelName(level Level) string {
+	switch level {
+	case LevelError:
+		return "error"
+	case LevelWarn:
+		return "warn"
+	case LevelInfo:
+		return "info"
+	case LevelDebug:
+		return "debug"
+	case LevelTrace:
+		return "trace"
+	default:
+		return "info"
+	}
 }
 
 func levelAttributes(level Level) (string, string) {
@@ -147,6 +204,12 @@ func ResolveLogSettings(flags CommonFlags, cfg AppConfig) (LogSettings, error) {
 	}
 
 	colorize := shouldColorize(colorPolicy)
+
+	format := resolveLogFormat(flags.LogFormat, cfg.Logging.Format)
+	if format == FormatJSON {
+		colorize = false
+	}
+
 	writers := []io.Writer{os.Stderr}
 
 	if flags.Quiet {
@@ -169,11 +232,37 @@ func ResolveLogSettings(flags CommonFlags, cfg AppConfig) (LogSettings, error) {
 
 	return LogSettings{
 		Level:       level,
+		Format:      format,
 		Diagnostics: flags.Diagnostics,
 		Colorize:    colorize,
 		Writers:     writers,
 		FileHandle:  fileHandle,
 	}, nil
+}
+
+// resolveLogFormat decides the encoding from the --log-format flag and the
+// configured default. Precedence: an explicit text/json flag wins, then the
+// config value, then auto-detection (json when stderr is not a terminal).
+func resolveLogFormat(flagValue, configValue string) LogFormat {
+	choice := configValue
+	if choice == "" {
+		choice = "auto"
+	}
+	if flagValue == "text" || flagValue == "json" {
+		choice = flagValue
+	}
+
+	switch choice {
+	case "text":
+		return FormatText
+	case "json":
+		return FormatJSON
+	default: // "auto"
+		if isTerminal(os.Stderr) {
+			return FormatText
+		}
+		return FormatJSON
+	}
 }
 
 func parseLevel(value string) Level {

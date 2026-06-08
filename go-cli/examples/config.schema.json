@@ -24,6 +24,12 @@
           "enum": ["error", "warn", "info", "debug", "trace"],
           "default": "info"
         },
+        "format": {
+          "type": "string",
+          "description": "Log output format",
+          "enum": ["auto", "text", "json"],
+          "default": "auto"
+        },
         "file": {
           "type": "string",
           "description": "Optional path for log file output. Supports ~ and environment variables."

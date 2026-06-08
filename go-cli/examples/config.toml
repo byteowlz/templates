@@ -8,6 +8,9 @@ profile = "default"
 [logging]
 # Valid levels: error, warn, info, debug, trace
 level = "info"
+# Output format: auto, text, or json.
+# "auto" emits pretty text on a terminal and JSON Lines when piped/redirected.
+format = "auto"
 # Optional path for log file output; supports ~ and environment variables.
 # file = "~/Library/Logs/{{project_name}}.log"
 
