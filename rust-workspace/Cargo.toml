@@ -6,6 +6,7 @@ members = [
     "crates/rust-tui",
     "crates/rust-mcp",
     "crates/rust-api",
+    "crates/byteowlz-tui-kit",
 ]
 
 [workspace.package]
@@ -55,6 +56,7 @@ schemars = "1.2"
 
 # Internal crates
 rust-core = { path = "crates/rust-core" }
+byteowlz-tui-kit = { path = "crates/byteowlz-tui-kit" }
 
 # ============================================
 # MAXIMUM PRESET - rust-magic-linter

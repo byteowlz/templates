@@ -18,6 +18,7 @@ path = "src/main.rs"
 
 [dependencies]
 rust-core.workspace = true
+byteowlz-tui-kit.workspace = true
 anyhow.workspace = true
 clap.workspace = true
 crossterm.workspace = true

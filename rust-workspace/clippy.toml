@@ -27,6 +27,7 @@ doc-valid-idents = [
     "TOML",     # Tom's Obvious Minimal Language
     "UUID",     # Universally Unique Identifier
     "URL",      # Uniform Resource Locator
+    "WhichKey", # The transient key-progression hint concept
     "HTTP",     # HyperText Transfer Protocol
     "HTTPS",    # HTTP Secure
     "TCP",      # Transmission Control Protocol

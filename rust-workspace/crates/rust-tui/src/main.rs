@@ -1,290 +1,342 @@
-//! TUI interface for rust-workspace.
+//! Reference TUI built on [`byteowlz_tui_kit`].
+//!
+//! Renders the "modern" byteowlz look: air over borders, weight-based hierarchy, one
+//! accent, a fuzzy command palette, and key progressions with an on-demand WhichKey hint.
+//! New byteowlz TUIs should start from this shape; see the `tui-design` skill.
 
-use std::io;
-use std::path::PathBuf;
 use std::time::Duration;
 
 use anyhow::Result;
-use clap::{Args, Parser};
-use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
-    execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
-};
-use ratatui::{
-    Frame, Terminal,
-    backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
-};
+use byteowlz_tui_kit::action::{Action, ActionId, Key, KeyRouter, Route};
+use byteowlz_tui_kit::event::{AppEvent, poll_event};
+use byteowlz_tui_kit::palette::{CommandPalette, PaletteOutcome};
+use byteowlz_tui_kit::prelude::*;
+use byteowlz_tui_kit::terminal::TerminalGuard;
+use byteowlz_tui_kit::whichkey;
+use clap::Parser;
+use ratatui::Frame;
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use ratatui::style::Modifier;
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Block, List, ListItem, Padding, Paragraph};
 
-use rust_core::{AppConfig, AppPaths};
-
-fn main() -> anyhow::Result<()> {
-    try_main()
+/// The actions available in Normal mode. Defined as data — adding one never adds a mode.
+fn actions() -> Vec<Action> {
+    vec![
+        Action::new(ActionId::new("quit"), "Quit").key(Key::ctrl_char('c')),
+        Action::new(ActionId::new("item.open"), "Open in editor").key(Key::enter()),
+        Action::new(ActionId::new("item.delete"), "Delete").key(Key::char('d')),
+        Action::new(ActionId::new("item.add"), "Add new").key(Key::char('a')),
+        Action::new(ActionId::new("palette.open"), "Command palette").key(Key::char(':')),
+        Action::new(ActionId::new("help"), "Help").key(Key::char('?')),
+        Action::new(ActionId::new("sort.date"), "Sort by date")
+            .keys(&[Key::char('s'), Key::char('d')]),
+        Action::new(ActionId::new("sort.importance"), "Sort by importance")
+            .keys(&[Key::char('s'), Key::char('i')]),
+        Action::new(ActionId::new("sort.category"), "Sort by category")
+            .keys(&[Key::char('s'), Key::char('c')]),
+        Action::new(ActionId::new("nav.down"), "Cursor down").key(Key::char('j')),
+        Action::new(ActionId::new("nav.up"), "Cursor up").key(Key::char('k')),
+    ]
 }
 
-fn try_main() -> Result<()> {
-    let cli = Cli::parse();
-    let paths = AppPaths::discover(cli.common.config.as_deref())?;
-    let config = AppConfig::load(&paths, false)?;
-
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
-
-    let mut app = App::new(config);
-    let result = run_app(&mut terminal, &mut app);
-
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-
-    result
+/// One demo item, shaped like a memory entry.
+#[derive(Debug, Clone)]
+struct Item {
+    title: String,
+    meta: String,
+    body: String,
 }
 
-#[derive(Debug, Parser)]
-#[command(author, version, about = "TUI interface for rust-workspace")]
-struct Cli {
-    #[command(flatten)]
-    common: CommonOpts,
+/// Seed items for the demo.
+const SEED: &[(&str, &str, &str)] = &[
+    (
+        "Port cleanup needs wait for exit",
+        "2d · debugging",
+        "Ports linger until the process fully exits; poll until the PID is gone.",
+    ),
+    (
+        "OpenCode PATCH renames session",
+        "3d · debugging",
+        "PATCH /session/{id} accepts {title} to rename a session.",
+    ),
+    (
+        "Voice mode uses eaRS for STT",
+        "5d · architecture",
+        "Voice mode uses eaRS for STT and kokorox for TTS over a WebSocket.",
+    ),
+    (
+        "sqlx offline mode for CI",
+        "1w · tooling",
+        "sqlx offline mode lets CI build without a live database.",
+    ),
+    (
+        "tokio task abort ordering",
+        "1w · patterns",
+        "Aborting a tokio task mid-await can drop guards before completion.",
+    ),
+];
+
+fn seed_items() -> Vec<Item> {
+    SEED.iter()
+        .map(|(title, meta, body)| Item {
+            title: (*title).to_string(),
+            meta: (*meta).to_string(),
+            body: (*body).to_string(),
+        })
+        .collect()
 }
 
-#[derive(Debug, Clone, Args)]
-struct CommonOpts {
-    /// Override the config file path
-    #[arg(long, value_name = "PATH")]
-    config: Option<PathBuf>,
-}
+/// An in-progress key progression and its next-key options, for the WhichKey hint.
+type PendingHint = (Vec<Key>, Vec<(Key, &'static str)>);
 
-/// Application mode for keyboard input routing.
-#[derive(Debug)]
-enum AppMode {
-    /// Normal navigation mode.
-    Normal,
-    /// Help overlay is visible.
-    Help,
-}
-
-/// Application state for the TUI.
+/// The app: state plus the kit pieces it drives.
 struct App {
-    /// Loaded application configuration.
-    config: AppConfig,
-    /// Current input mode.
-    mode: AppMode,
-    /// Index of the currently selected item.
-    selected_index: usize,
-    /// List of items to display.
-    items: Vec<String>,
-    /// Message shown in the status bar.
-    status_message: String,
+    theme: Theme,
+    items: Vec<Item>,
+    selection: Selection,
+    router: KeyRouter<'static>,
+    status: String,
+    palette: Option<CommandPalette>,
+    pending_hint: Option<PendingHint>,
 }
 
 impl App {
-    fn new(config: AppConfig) -> Self {
+    fn new() -> Self {
+        // NOTE: the router borrows the action table for its lifetime. We leak the boxed
+        // table to a 'static reference so the borrow is valid for the whole session; the
+        // process is short-lived so this bounded leak is acceptable for a demo.
+        let actions: &'static [Action] = Box::leak(actions().into_boxed_slice());
+        let items = seed_items();
+        let mut selection = Selection::default();
+        selection.next(items.len());
         Self {
-            config,
-            mode: AppMode::Normal,
-            selected_index: 0,
-            items: vec![
-                "Item 1".to_string(),
-                "Item 2".to_string(),
-                "Item 3".to_string(),
-                "Item 4".to_string(),
-                "Item 5".to_string(),
-            ],
-            status_message: "Press ? for help, q to quit".to_string(),
-        }
-    }
-
-    const fn next(&mut self) {
-        if !self.items.is_empty() {
-            self.selected_index = (self.selected_index + 1) % self.items.len();
-        }
-    }
-
-    fn previous(&mut self) {
-        if !self.items.is_empty() {
-            self.selected_index = self
-                .selected_index
-                .checked_sub(1)
-                .unwrap_or(self.items.len() - 1);
+            theme: Theme::ansi_default(),
+            items,
+            selection,
+            router: KeyRouter::new(actions),
+            status: format!("{} items", SEED.len()),
+            palette: None,
+            pending_hint: None,
         }
     }
 }
 
-fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()>
-where
-    B::Error: Send + Sync + 'static,
-{
+#[derive(Parser)]
+#[command(name = "rust-tui", version, about = "Reference byteowlz TUI")]
+struct Cli {}
+
+/// The top-level flow signal.
+enum Flow {
+    Quit,
+    Continue,
+}
+
+fn main() -> Result<()> {
+    let _ = Cli::parse();
+    let mut guard = TerminalGuard::enter()?;
+    let mut app = App::new();
+    let tick = Duration::from_millis(120);
     loop {
-        terminal.draw(|f| ui(f, app))?;
+        guard.draw(|frame| draw(frame, &mut app))?;
+        let Some(event) = poll_event(tick)? else {
+            continue;
+        };
+        if matches!(handle(event, &mut app), Flow::Quit) {
+            break;
+        }
+    }
+    Ok(())
+}
 
-        if event::poll(Duration::from_millis(100))?
-            && let Event::Key(key) = event::read()?
-        {
-            if key.kind != KeyEventKind::Press {
-                continue;
-            }
+/// Dispatch a normalized event, returning whether to quit.
+fn handle(event: AppEvent, app: &mut App) -> Flow {
+    let key = match event {
+        AppEvent::Key(key) => key,
+        AppEvent::Tick | AppEvent::Resize(_, _) => return Flow::Continue,
+    };
+    if app.palette.is_some() {
+        return handle_palette(key, app);
+    }
+    handle_normal(key, app)
+}
 
-            match &app.mode {
-                AppMode::Normal => match key.code {
-                    KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Char('?') => app.mode = AppMode::Help,
-                    KeyCode::Char('j') | KeyCode::Down => app.next(),
-                    KeyCode::Char('k') | KeyCode::Up => app.previous(),
-                    _ => {}
-                },
-                AppMode::Help => match key.code {
-                    KeyCode::Esc | KeyCode::Char('q' | '?') => {
-                        app.mode = AppMode::Normal;
-                    }
-                    _ => {}
-                },
+/// Handle a key while the command palette is open.
+fn handle_palette(key: Key, app: &mut App) -> Flow {
+    let outcome = app
+        .palette
+        .as_mut()
+        .map_or(PaletteOutcome::Closed, |p| p.handle(key));
+    match outcome {
+        PaletteOutcome::Closed => app.palette = None,
+        PaletteOutcome::Run(id) => {
+            app.palette = None;
+            apply_action(id, app);
+            if id == ActionId::new("quit") {
+                return Flow::Quit;
             }
         }
+        PaletteOutcome::Open => {}
+    }
+    Flow::Continue
+}
+
+/// Handle a key in Normal mode: route through the prefix machine, or open the palette.
+fn handle_normal(key: Key, app: &mut App) -> Flow {
+    if key == Key::char('q') {
+        return Flow::Quit;
+    }
+    if key == Key::char(':') {
+        app.palette = Some(CommandPalette::new(app.router.actions_ref().to_vec()));
+        app.pending_hint = None;
+        app.router.reset();
+        return Flow::Continue;
+    }
+    match app.router.feed(key) {
+        Route::Action(id) => {
+            app.pending_hint = None;
+            apply_action(id, app);
+            if id == ActionId::new("quit") {
+                return Flow::Quit;
+            }
+        }
+        Route::Prefix(options) => {
+            app.pending_hint = Some((app.router.prefix_ref().to_vec(), options));
+        }
+        Route::Miss => app.pending_hint = None,
+    }
+    Flow::Continue
+}
+
+/// Apply an action by id (navigation + the few that mutate state).
+fn apply_action(id: ActionId, app: &mut App) {
+    let max = app.items.len();
+    let moved = match id {
+        x if x == ActionId::new("nav.down") => {
+            app.selection.next(max);
+            true
+        }
+        x if x == ActionId::new("nav.up") => {
+            app.selection.previous(max);
+            true
+        }
+        _ => false,
+    };
+    if !moved && id != ActionId::new("quit") {
+        app.status = format!("ran: {id}");
     }
 }
 
-fn ui(f: &mut Frame<'_>, app: &App) {
+/// Render one frame.
+fn draw(frame: &mut Frame<'_>, app: &mut App) {
+    let [main_area, status_area, hint_area] = layout(frame);
+    let [list_area, detail_area] = body(main_area);
+    draw_list(frame, app, list_area);
+    draw_detail(frame, app, detail_area);
+    draw_status_row(frame, app, status_area);
+    if let Some((prefix, options)) = &app.pending_hint {
+        whichkey::draw_hint(frame, hint_area, app.theme, prefix, options);
+    }
+    if let Some(palette) = app.palette.as_mut() {
+        palette.draw(frame, app.theme);
+    }
+}
+
+/// Split the frame into main, status, and hint rows.
+fn layout(frame: &Frame<'_>) -> [Rect; 3] {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(1)])
-        .split(f.area());
-
-    let main_chunks = Layout::default()
-        .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage(20),
-            Constraint::Percentage(40),
-            Constraint::Percentage(40),
+            Constraint::Min(0),
+            Constraint::Length(1),
+            Constraint::Length(1),
         ])
-        .split(chunks[0]);
-
-    draw_left_pane(f, app, main_chunks[0]);
-    draw_middle_pane(f, app, main_chunks[1]);
-    draw_right_pane(f, app, main_chunks[2]);
-    draw_status_bar(f, app, chunks[1]);
-
-    if matches!(app.mode, AppMode::Help) {
-        draw_help_overlay(f);
-    }
+        .split(frame.area());
+    [chunks[0], chunks[1], chunks[2]]
 }
 
-fn draw_left_pane(f: &mut Frame<'_>, _app: &App, area: Rect) {
-    let block = Block::default().title(" Navigation ").borders(Borders::ALL);
-    let items = vec![
-        ListItem::new("All"),
-        ListItem::new("Recent"),
-        ListItem::new("Favorites"),
+/// Split the main area into list (left) and detail (right) columns.
+fn body(area: Rect) -> [Rect; 2] {
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(45), Constraint::Percentage(55)])
+        .split(area);
+    [chunks[0], chunks[1]]
+}
+
+/// Draw the status line: counts on the left, key hints on the right.
+fn draw_status_row(frame: &mut Frame<'_>, app: &App, area: Rect) {
+    let left = format!(
+        "{}  ·  {} selected",
+        app.status,
+        app.selection.selected().len()
+    );
+    let hints: [(&str, &str); 6] = [
+        ("Ret", "open"),
+        ("d", "delete"),
+        ("s", "sort"),
+        (":", "commands"),
+        ("?", "help"),
+        ("q", "quit"),
     ];
-    let list = List::new(items).block(block);
-    f.render_widget(list, area);
+    draw_status_bar(frame, area, app.theme, &left, &hints);
 }
 
-fn draw_middle_pane(f: &mut Frame<'_>, app: &App, area: Rect) {
-    let block = Block::default().title(" Items ").borders(Borders::ALL);
+/// Draw the item list — air over borders, accent focus via the cursor.
+fn draw_list(frame: &mut Frame<'_>, app: &App, area: Rect) {
+    let theme = app.theme;
     let items: Vec<ListItem<'_>> = app
         .items
         .iter()
         .enumerate()
-        .map(|(i, item)| {
-            let style = if i == app.selected_index {
-                Style::default()
-                    .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default()
-            };
-            ListItem::new(item.as_str()).style(style)
-        })
+        .map(|(i, item)| list_row(i, item, app, theme))
         .collect();
-    let list = List::new(items).block(block);
-    f.render_widget(list, area);
+    let list = List::new(items).highlight_style(theme.focus().add_modifier(Modifier::BOLD));
+    let block = Block::default().padding(Padding::new(1, 1, 1, 0));
+    let mut state = app.selection.state();
+    frame.render_stateful_widget(list.block(block), area, &mut state);
 }
 
-fn draw_right_pane(f: &mut Frame<'_>, app: &App, area: Rect) {
-    let block = Block::default().title(" Details ").borders(Borders::ALL);
-    let content = if app.selected_index < app.items.len() {
-        format!(
-            "Selected: {}\nProfile: {}",
-            app.items[app.selected_index], app.config.profile
-        )
+/// Build one list row.
+fn list_row<'a>(index: usize, item: &'a Item, app: &App, theme: Theme) -> ListItem<'a> {
+    let marker = if app.selection.is_selected(index) {
+        "● "
     } else {
-        "No item selected".to_string()
+        "  "
     };
-    let paragraph = Paragraph::new(content).block(block);
-    f.render_widget(paragraph, area);
-}
-
-fn draw_status_bar(f: &mut Frame<'_>, app: &App, area: Rect) {
-    let mode_indicator = match app.mode {
-        AppMode::Normal => Span::styled(
-            " NORMAL ",
-            Style::default().fg(Color::Black).bg(Color::Green),
-        ),
-        AppMode::Help => Span::styled(
-            " HELP ",
-            Style::default().fg(Color::Black).bg(Color::Yellow),
-        ),
+    let style = if index == app.selection.index() {
+        theme.focus()
+    } else {
+        theme.fg(Token::Primary)
     };
-
-    let status = Line::from(vec![
-        mode_indicator,
-        Span::raw(" "),
-        Span::raw(&app.status_message),
+    let line = Line::from(vec![
+        Span::styled(marker, theme.fg(Token::Accent)),
+        Span::styled(&item.title, style),
     ]);
-
-    f.render_widget(Paragraph::new(status), area);
+    ListItem::new(line)
 }
 
-fn draw_help_overlay(f: &mut Frame<'_>) {
-    let area = centered_rect(60, 60, f.area());
-    let block = Block::default()
-        .title(" Help ")
-        .borders(Borders::ALL)
-        .style(Style::default().bg(Color::DarkGray));
-
-    let help_text = vec![
-        Line::from("Navigation:"),
-        Line::from("  j/Down  - Move down"),
-        Line::from("  k/Up    - Move up"),
+/// Draw the detail pane — progressive disclosure.
+fn draw_detail(frame: &mut Frame<'_>, app: &App, area: Rect) {
+    let theme = app.theme;
+    let idx = app.selection.index() % app.items.len();
+    let item = &app.items[idx];
+    let lines = vec![
+        Line::from(Span::styled(
+            format!("MEMORY · {}", item.meta),
+            theme.fg(Token::Muted),
+        )),
         Line::from(""),
-        Line::from("Actions:"),
-        Line::from("  ?       - Toggle help"),
-        Line::from("  q       - Quit"),
+        Line::from(Span::styled(&item.title, theme.fg_bold(Token::Primary))),
+        Line::from(Span::styled(&item.meta, theme.fg(Token::Muted))),
         Line::from(""),
-        Line::from("Press Esc or ? to close"),
+        Line::from(Span::styled(&item.body, theme.fg(Token::Muted))),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Ret open full editor",
+            theme.fg(Token::Accent),
+        )),
     ];
-
-    let paragraph = Paragraph::new(help_text).block(block);
-    f.render_widget(paragraph, area);
-}
-
-fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(area);
-
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1]
+    let block = Block::default().padding(Padding::uniform(1));
+    frame.render_widget(Paragraph::new(lines).block(block), area);
 }
