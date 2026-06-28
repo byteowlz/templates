@@ -125,86 +125,78 @@ pub fn expand_str_path(text: &str) -> Result<PathBuf> {
     Ok(PathBuf::from(expanded.to_string()))
 }
 
-/// Get the default configuration directory (`XDG_CONFIG_HOME` or fallback).
+/// Resolve a base directory deterministically (pure; unit-tested below).
+///
+/// An explicit, absolute `XDG_*` path wins on any OS; otherwise `~/<unix_rel>`
+/// on all unix **including macOS** (deliberately NOT `~/Library/Application
+/// Support` for CLI tools), or the Windows known directory.
+fn resolve_base(
+    xdg: Option<PathBuf>,
+    home: Option<PathBuf>,
+    win_dir: Option<PathBuf>,
+    is_windows: bool,
+    unix_rel: &str,
+) -> Option<PathBuf> {
+    if let Some(path) = xdg.filter(|p| p.is_absolute()) {
+        return Some(path);
+    }
+    if is_windows {
+        win_dir
+    } else {
+        home.map(|home| home.join(unix_rel))
+    }
+}
+
+/// Read the relevant env vars and resolve a base dir via [`resolve_base`].
+/// Zero-dependency: no `dirs` crate (whose macOS default we deliberately avoid).
+fn base_dir(xdg_var: &str, unix_rel: &str, win_var: &str) -> Result<PathBuf> {
+    resolve_base(
+        env::var_os(xdg_var).map(PathBuf::from),
+        env::var_os("HOME").map(PathBuf::from),
+        env::var_os(win_var).map(PathBuf::from),
+        cfg!(windows),
+        unix_rel,
+    )
+    .ok_or_else(|| anyhow!("unable to determine base directory ({xdg_var})"))
+}
+
+/// Get the default configuration directory.
+///
+/// `XDG_CONFIG_HOME` wins on any OS; else `~/.config` on unix (incl. macOS) or
+/// `%APPDATA%` on Windows.
 ///
 /// # Errors
 ///
-/// Returns an error if the home directory cannot be determined.
+/// Returns an error if no base directory can be determined.
 pub fn default_config_dir() -> Result<PathBuf> {
-    if let Some(dir) = env::var_os("XDG_CONFIG_HOME").filter(|v| !v.is_empty()) {
-        let mut path = PathBuf::from(dir);
-        path.push(APP_NAME);
-        return Ok(path);
-    }
-
-    if let Some(mut dir) = dirs::config_dir() {
-        dir.push(APP_NAME);
-        return Ok(dir);
-    }
-
-    dirs::home_dir()
-        .map(|home| home.join(".config").join(APP_NAME))
-        .ok_or_else(|| anyhow!("unable to determine configuration directory"))
+    Ok(base_dir("XDG_CONFIG_HOME", ".config", "APPDATA")?.join(APP_NAME))
 }
 
-/// Get the default data directory (`XDG_DATA_HOME` or fallback).
+/// Get the default data directory (`XDG_DATA_HOME`; else `~/.local/share` / `%APPDATA%`).
 ///
 /// # Errors
 ///
-/// Returns an error if the home directory cannot be determined.
+/// Returns an error if no base directory can be determined.
 pub fn default_data_dir() -> Result<PathBuf> {
-    if let Some(dir) = env::var_os("XDG_DATA_HOME").filter(|v| !v.is_empty()) {
-        return Ok(PathBuf::from(dir).join(APP_NAME));
-    }
-
-    if let Some(mut dir) = dirs::data_dir() {
-        dir.push(APP_NAME);
-        return Ok(dir);
-    }
-
-    dirs::home_dir()
-        .map(|home| home.join(".local").join("share").join(APP_NAME))
-        .ok_or_else(|| anyhow!("unable to determine data directory"))
+    Ok(base_dir("XDG_DATA_HOME", ".local/share", "APPDATA")?.join(APP_NAME))
 }
 
-/// Get the default state directory (`XDG_STATE_HOME` or fallback).
+/// Get the default state directory (`XDG_STATE_HOME`; else `~/.local/state` / `%LOCALAPPDATA%`).
 ///
 /// # Errors
 ///
-/// Returns an error if the home directory cannot be determined.
+/// Returns an error if no base directory can be determined.
 pub fn default_state_dir() -> Result<PathBuf> {
-    if let Some(dir) = env::var_os("XDG_STATE_HOME").filter(|v| !v.is_empty()) {
-        return Ok(PathBuf::from(dir).join(APP_NAME));
-    }
-
-    if let Some(mut dir) = dirs::state_dir() {
-        dir.push(APP_NAME);
-        return Ok(dir);
-    }
-
-    dirs::home_dir()
-        .map(|home| home.join(".local").join("state").join(APP_NAME))
-        .ok_or_else(|| anyhow!("unable to determine state directory"))
+    Ok(base_dir("XDG_STATE_HOME", ".local/state", "LOCALAPPDATA")?.join(APP_NAME))
 }
 
-/// Get the default cache directory (`XDG_CACHE_HOME` or fallback).
+/// Get the default cache directory (`XDG_CACHE_HOME`; else `~/.cache` / `%LOCALAPPDATA%`).
 ///
 /// # Errors
 ///
-/// Returns an error if the home directory cannot be determined.
+/// Returns an error if no base directory can be determined.
 pub fn default_cache_dir() -> Result<PathBuf> {
-    if let Some(dir) = env::var_os("XDG_CACHE_HOME").filter(|v| !v.is_empty()) {
-        return Ok(PathBuf::from(dir).join(APP_NAME));
-    }
-
-    if let Some(mut dir) = dirs::cache_dir() {
-        dir.push(APP_NAME);
-        return Ok(dir);
-    }
-
-    dirs::home_dir()
-        .map(|home| home.join(".cache").join(APP_NAME))
-        .ok_or_else(|| anyhow!("unable to determine cache directory"))
+    Ok(base_dir("XDG_CACHE_HOME", ".cache", "LOCALAPPDATA")?.join(APP_NAME))
 }
 
 /// Write the default configuration file to the specified path.
@@ -235,4 +227,52 @@ fn default_config_header(path: &Path) -> String {
     buffer.push('\n');
     buffer.push('\n');
     buffer
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn xdg_absolute_path_wins_on_any_os() {
+        let got = resolve_base(
+            Some(PathBuf::from("/explicit/xdg")),
+            Some(PathBuf::from("/home/u")),
+            Some(PathBuf::from("C:/Users/u/AppData/Roaming")),
+            true,
+            ".config",
+        );
+        assert_eq!(got, Some(PathBuf::from("/explicit/xdg")));
+    }
+
+    #[test]
+    fn unix_incl_macos_uses_home_dotpath_not_library() {
+        // is_windows = false covers Linux AND macOS — deliberately ~/.config, never ~/Library.
+        let got = resolve_base(None, Some(PathBuf::from("/home/u")), None, false, ".config");
+        assert_eq!(got, Some(PathBuf::from("/home/u/.config")));
+    }
+
+    #[test]
+    fn windows_uses_known_dir() {
+        let got = resolve_base(
+            None,
+            Some(PathBuf::from("C:/Users/u")),
+            Some(PathBuf::from("C:/Users/u/AppData/Roaming")),
+            true,
+            ".config",
+        );
+        assert_eq!(got, Some(PathBuf::from("C:/Users/u/AppData/Roaming")));
+    }
+
+    #[test]
+    fn relative_xdg_is_ignored() {
+        let got = resolve_base(
+            Some(PathBuf::from("relative/path")),
+            Some(PathBuf::from("/home/u")),
+            None,
+            false,
+            ".local/state",
+        );
+        assert_eq!(got, Some(PathBuf::from("/home/u/.local/state")));
+    }
 }
