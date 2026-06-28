@@ -13,12 +13,13 @@ use byteowlz_tui_kit::palette::{CommandPalette, PaletteOutcome};
 use byteowlz_tui_kit::prelude::*;
 use byteowlz_tui_kit::terminal::TerminalGuard;
 use byteowlz_tui_kit::whichkey;
+use byteowlz_tui_kit::widgets::{bar, panel};
 use clap::Parser;
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::Modifier;
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, List, ListItem, Padding, Paragraph};
+use ratatui::widgets::{List, ListItem, Padding, Paragraph};
 
 /// The actions available in Normal mode. Defined as data — adding one never adds a mode.
 fn actions() -> Vec<Action> {
@@ -229,8 +230,9 @@ fn apply_action(id: ActionId, app: &mut App) {
 
 /// Render one frame.
 fn draw(frame: &mut Frame<'_>, app: &mut App) {
-    let [main_area, status_area, hint_area] = layout(frame);
+    let [header_area, main_area, status_area, hint_area] = layout(frame);
     let [list_area, detail_area] = body(main_area);
+    draw_header(frame, app, header_area);
     draw_list(frame, app, list_area);
     draw_detail(frame, app, detail_area);
     draw_status_row(frame, app, status_area);
@@ -242,35 +244,56 @@ fn draw(frame: &mut Frame<'_>, app: &mut App) {
     }
 }
 
-/// Split the frame into main, status, and hint rows.
-fn layout(frame: &Frame<'_>) -> [Rect; 3] {
+/// Split the frame into header, main, status, and hint rows.
+fn layout(frame: &Frame<'_>) -> [Rect; 4] {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
+            Constraint::Length(1),
             Constraint::Min(0),
             Constraint::Length(1),
             Constraint::Length(1),
         ])
         .split(frame.area());
-    [chunks[0], chunks[1], chunks[2]]
+    [chunks[0], chunks[1], chunks[2], chunks[3]]
 }
 
-/// Split the main area into list (left) and detail (right) columns.
+/// Split the main area into list (left), gap, and detail (right) columns.
 fn body(area: Rect) -> [Rect; 2] {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(45), Constraint::Percentage(55)])
+        .constraints([
+            Constraint::Length(38),
+            Constraint::Length(1),
+            Constraint::Min(0),
+        ])
         .split(area);
-    [chunks[0], chunks[1]]
+    [chunks[0], chunks[2]]
+}
+
+/// Draw the header strip: app name + context, on a filled bar.
+fn draw_header(frame: &mut Frame<'_>, app: &App, area: Rect) {
+    let theme = app.theme;
+    let line = Line::from(vec![
+        Span::styled(" memory ", theme.on_bar_bold(Token::Accent)),
+        Span::styled("  ·  ", theme.on_bar(Token::Muted)),
+        Span::styled("default store", theme.on_bar(Token::Muted)),
+    ]);
+    frame.render_widget(bar(line, theme), area);
 }
 
 /// Draw the status line: counts on the left, key hints on the right.
 fn draw_status_row(frame: &mut Frame<'_>, app: &App, area: Rect) {
-    let left = format!(
-        "{}  ·  {} selected",
-        app.status,
-        app.selection.selected().len()
-    );
+    let left = if app.selection.has_selection() {
+        format!(
+            "{} · {} of {} selected",
+            app.status,
+            app.selection.selected().len(),
+            app.items.len()
+        )
+    } else {
+        format!("{} · {} items", app.status, app.items.len())
+    };
     let hints: [(&str, &str); 6] = [
         ("Ret", "open"),
         ("d", "delete"),
@@ -282,7 +305,7 @@ fn draw_status_row(frame: &mut Frame<'_>, app: &App, area: Rect) {
     draw_status_bar(frame, area, app.theme, &left, &hints);
 }
 
-/// Draw the item list — air over borders, accent focus via the cursor.
+/// Draw the item list inside an active titled panel.
 fn draw_list(frame: &mut Frame<'_>, app: &App, area: Rect) {
     let theme = app.theme;
     let items: Vec<ListItem<'_>> = app
@@ -292,7 +315,7 @@ fn draw_list(frame: &mut Frame<'_>, app: &App, area: Rect) {
         .map(|(i, item)| list_row(i, item, app, theme))
         .collect();
     let list = List::new(items).highlight_style(theme.focus().add_modifier(Modifier::BOLD));
-    let block = Block::default().padding(Padding::new(1, 1, 1, 0));
+    let block = panel("items", theme, true);
     let mut state = app.selection.state();
     frame.render_stateful_widget(list.block(block), area, &mut state);
 }
@@ -316,7 +339,7 @@ fn list_row<'a>(index: usize, item: &'a Item, app: &App, theme: Theme) -> ListIt
     ListItem::new(line)
 }
 
-/// Draw the detail pane — progressive disclosure.
+/// Draw the detail pane — progressive disclosure, inside a titled panel.
 fn draw_detail(frame: &mut Frame<'_>, app: &App, area: Rect) {
     let theme = app.theme;
     let idx = app.selection.index() % app.items.len();
@@ -337,6 +360,6 @@ fn draw_detail(frame: &mut Frame<'_>, app: &App, area: Rect) {
             theme.fg(Token::Accent),
         )),
     ];
-    let block = Block::default().padding(Padding::uniform(1));
+    let block = panel("detail", theme, false).padding(Padding::uniform(1));
     frame.render_widget(Paragraph::new(lines).block(block), area);
 }

@@ -11,7 +11,9 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::Modifier;
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{
+    Block, BorderType, Borders, Clear, List, ListItem, ListState, Padding, Paragraph,
+};
 
 use crate::theme::{Theme, Token};
 
@@ -125,8 +127,8 @@ impl Selection {
 /// Build a [`List`] of plain strings, applying the theme's focus style to the cursor row
 /// and a subtle marker to multi-selected rows.
 ///
-/// The list uses **no border** (air over borders, rule V1); callers add padding via their
-/// layout. Pass the [`Selection`] so the cursor and selection highlight correctly.
+/// The list itself has no block; render it inside a [`panel`] to get the titled rounded
+/// border. Pass the [`Selection`] so the cursor and selection highlight correctly.
 #[must_use]
 pub fn styled_list<'a>(items: &'a [&'a str], selection: &Selection, theme: Theme) -> List<'a> {
     let list_items: Vec<ListItem<'a>> = items
@@ -146,9 +148,43 @@ pub fn styled_list<'a>(items: &'a [&'a str], selection: &Selection, theme: Theme
         .highlight_symbol("▌ ")
 }
 
-/// Render the single status line: counts on the left, key hints on the right.
+/// A titled, rounded-border panel — the primary container for a region.
 ///
-/// One quiet line. Never a busy toolbar (rule V5).
+/// `active` controls the border color: `Accent` for the focused panel, `Muted` otherwise.
+/// The title sits in the top border. Returns the block; render your content inside it.
+///
+/// This is the modern byteowlz panel: thin styled border + a fill-free interior, not a
+/// heavy double box and not a borderless void.
+#[must_use]
+pub fn panel(title: &str, theme: Theme, active: bool) -> Block<'_> {
+    let border = if active {
+        theme.border_focus()
+    } else {
+        theme.border()
+    };
+    let title_span = Line::from(vec![
+        Span::styled(" ", border),
+        Span::styled(title, theme.fg_bold(Token::Primary)),
+    ]);
+    Block::default()
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(border)
+        .title_top(title_span)
+        .padding(Padding::horizontal(1))
+}
+
+/// A full-width header or status strip with a `Bar` background fill.
+///
+/// Pass a pre-built [`Line`] (usually of [`crate::theme::Theme::on_bar`] spans) so the
+/// text contrasts on the filled strip. Returns the paragraph ready to render.
+#[must_use]
+pub fn bar(line: Line<'_>, theme: Theme) -> Paragraph<'_> {
+    Paragraph::new(line).style(theme.bg(Token::Bar))
+}
+
+/// Render a filled status line: counts on the left, key hints on the right, on a `Bar`
+/// background. The single quiet chrome line at the bottom of the app (rule V5).
 pub fn draw_status_bar(
     frame: &mut Frame<'_>,
     area: Rect,
@@ -156,9 +192,10 @@ pub fn draw_status_bar(
     left: &str,
     hints: &[(&str, &str)],
 ) {
+    frame.render_widget(Paragraph::new("").style(theme.bg(Token::Bar)), area);
     let [left_area, right_area] = split_status(area);
 
-    let left_line = Line::from(vec![Span::styled(left, theme.fg(Token::Muted))]);
+    let left_line = Line::from(vec![Span::styled(left, theme.on_bar(Token::Muted))]);
     frame.render_widget(Paragraph::new(left_line), left_area);
 
     let mut spans: Vec<Span<'_>> = Vec::with_capacity(hints.len() * 3);
@@ -166,9 +203,9 @@ pub fn draw_status_bar(
         if i > 0 {
             spans.push(Span::raw("   "));
         }
-        spans.push(Span::styled(*key, theme.fg_bold(Token::Primary)));
+        spans.push(Span::styled(*key, theme.on_bar_bold(Token::Primary)));
         spans.push(Span::raw(" "));
-        spans.push(Span::styled(*label, theme.fg(Token::Muted)));
+        spans.push(Span::styled(*label, theme.on_bar(Token::Muted)));
     }
     let right_line = Line::from(spans).right_aligned();
     frame.render_widget(Paragraph::new(right_line), right_area);
