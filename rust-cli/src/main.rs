@@ -513,8 +513,7 @@ fn write_default_config(path: &Path) -> Result<()> {
     }
 
     let app_config = AppConfig::default();
-    let toml =
-        toml::to_string_pretty(&app_config).context("serializing default config to TOML")?;
+    let toml = toml::to_string_pretty(&app_config).context("serializing default config to TOML")?;
     let mut body = default_config_header(path);
     body.push_str(&toml);
     fs::write(path, body).with_context(|| format!("writing config file to {}", path.display()))
@@ -591,66 +590,52 @@ fn expand_str_path(text: &str) -> Result<PathBuf> {
     Ok(PathBuf::from(expanded.to_string()))
 }
 
+/// Resolve a base dir: an explicit, absolute `XDG_*` path wins on any OS; else
+/// the home dir joined with `unix_rel` on Linux and macOS (deliberately not the
+/// "Application Support" location for a CLI tool), else the Windows known dir.
+/// Zero-dependency (no `dirs` crate).
+fn resolve_base(
+    xdg: Option<PathBuf>,
+    home: Option<PathBuf>,
+    win_dir: Option<PathBuf>,
+    is_windows: bool,
+    unix_rel: &str,
+) -> Option<PathBuf> {
+    if let Some(path) = xdg.filter(|p| p.is_absolute()) {
+        return Some(path);
+    }
+    if is_windows {
+        win_dir
+    } else {
+        home.map(|home| home.join(unix_rel))
+    }
+}
+
+fn base_dir(xdg_var: &str, unix_rel: &str, win_var: &str) -> Result<PathBuf> {
+    resolve_base(
+        env::var_os(xdg_var).map(PathBuf::from),
+        env::var_os("HOME").map(PathBuf::from),
+        env::var_os(win_var).map(PathBuf::from),
+        cfg!(windows),
+        unix_rel,
+    )
+    .ok_or_else(|| anyhow!("unable to determine base directory ({xdg_var})"))
+}
+
 fn default_config_dir() -> Result<PathBuf> {
-    if let Some(dir) = env::var_os("XDG_CONFIG_HOME").filter(|v| !v.is_empty()) {
-        let mut path = PathBuf::from(dir);
-        path.push(APP_NAME);
-        return Ok(path);
-    }
-
-    if let Some(mut dir) = dirs::config_dir() {
-        dir.push(APP_NAME);
-        return Ok(dir);
-    }
-
-    dirs::home_dir()
-        .map(|home| home.join(".config").join(APP_NAME))
-        .ok_or_else(|| anyhow!("unable to determine configuration directory"))
+    Ok(base_dir("XDG_CONFIG_HOME", ".config", "APPDATA")?.join(APP_NAME))
 }
 
 fn default_data_dir() -> Result<PathBuf> {
-    if let Some(dir) = env::var_os("XDG_DATA_HOME").filter(|v| !v.is_empty()) {
-        return Ok(PathBuf::from(dir).join(APP_NAME));
-    }
-
-    if let Some(mut dir) = dirs::data_dir() {
-        dir.push(APP_NAME);
-        return Ok(dir);
-    }
-
-    dirs::home_dir()
-        .map(|home| home.join(".local").join("share").join(APP_NAME))
-        .ok_or_else(|| anyhow!("unable to determine data directory"))
+    Ok(base_dir("XDG_DATA_HOME", ".local/share", "APPDATA")?.join(APP_NAME))
 }
 
 fn default_state_dir() -> Result<PathBuf> {
-    if let Some(dir) = env::var_os("XDG_STATE_HOME").filter(|v| !v.is_empty()) {
-        return Ok(PathBuf::from(dir).join(APP_NAME));
-    }
-
-    if let Some(mut dir) = dirs::state_dir() {
-        dir.push(APP_NAME);
-        return Ok(dir);
-    }
-
-    dirs::home_dir()
-        .map(|home| home.join(".local").join("state").join(APP_NAME))
-        .ok_or_else(|| anyhow!("unable to determine state directory"))
+    Ok(base_dir("XDG_STATE_HOME", ".local/state", "LOCALAPPDATA")?.join(APP_NAME))
 }
 
 fn default_cache_dir() -> Result<PathBuf> {
-    if let Some(dir) = env::var_os("XDG_CACHE_HOME").filter(|v| !v.is_empty()) {
-        return Ok(PathBuf::from(dir).join(APP_NAME));
-    }
-
-    if let Some(mut dir) = dirs::cache_dir() {
-        dir.push(APP_NAME);
-        return Ok(dir);
-    }
-
-    dirs::home_dir()
-        .map(|home| home.join(".cache").join(APP_NAME))
-        .ok_or_else(|| anyhow!("unable to determine cache directory"))
+    Ok(base_dir("XDG_CACHE_HOME", ".cache", "LOCALAPPDATA")?.join(APP_NAME))
 }
 
 fn env_prefix() -> String {
@@ -667,8 +652,7 @@ fn env_prefix() -> String {
 }
 
 fn default_parallelism() -> usize {
-    std::thread::available_parallelism()
-        .map_or(1, std::num::NonZero::get)
+    std::thread::available_parallelism().map_or(1, std::num::NonZero::get)
 }
 
 // Re-use schema generation from library

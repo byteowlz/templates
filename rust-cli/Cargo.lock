@@ -672,7 +672,6 @@ dependencies = [
  "clap",
  "clap_complete",
  "config",
- "dirs",
  "env_logger",
  "log",
  "schemars",
