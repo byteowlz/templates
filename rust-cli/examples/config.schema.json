@@ -10,7 +10,7 @@
       "type": "string"
     },
     "logging": {
-      "description": "Logging configuration",
+      "description": "Logging configuration.",
       "allOf": [
         {
           "$ref": "#/definitions/LoggingConfig"
@@ -22,7 +22,7 @@
       }
     },
     "paths": {
-      "description": "Directory path overrides",
+      "description": "Directory path overrides.",
       "allOf": [
         {
           "$ref": "#/definitions/PathsConfig"
@@ -34,12 +34,12 @@
       }
     },
     "profile": {
-      "description": "Active configuration profile name",
+      "description": "Active configuration profile name.",
       "type": "string",
       "default": "default"
     },
     "runtime": {
-      "description": "Runtime behavior configuration",
+      "description": "Runtime behavior configuration.",
       "allOf": [
         {
           "$ref": "#/definitions/RuntimeConfig"
@@ -58,7 +58,7 @@
       "type": "object",
       "properties": {
         "file": {
-          "description": "Optional file path to write logs to",
+          "description": "Optional file path to write logs to.",
           "type": [
             "string",
             "null"
@@ -66,7 +66,7 @@
           "default": null
         },
         "level": {
-          "description": "Log level (trace, debug, info, warn, error)",
+          "description": "Log level (trace, debug, info, warn, error).",
           "type": "string",
           "default": "info"
         }
@@ -77,7 +77,7 @@
       "type": "object",
       "properties": {
         "data_dir": {
-          "description": "Override the data directory path",
+          "description": "Override the data directory path.",
           "type": [
             "string",
             "null"
@@ -85,7 +85,7 @@
           "default": null
         },
         "state_dir": {
-          "description": "Override the state directory path",
+          "description": "Override the state directory path.",
           "type": [
             "string",
             "null"
@@ -99,12 +99,12 @@
       "type": "object",
       "properties": {
         "fail_fast": {
-          "description": "Stop on first error instead of continuing",
+          "description": "Stop on first error instead of continuing.",
           "type": "boolean",
           "default": true
         },
         "parallelism": {
-          "description": "Number of parallel tasks (defaults to CPU count)",
+          "description": "Number of parallel tasks (defaults to CPU count).",
           "type": [
             "integer",
             "null"
@@ -114,7 +114,7 @@
           "minimum": 0
         },
         "timeout": {
-          "description": "Default timeout in seconds for operations",
+          "description": "Default timeout in seconds for operations.",
           "type": [
             "integer",
             "null"

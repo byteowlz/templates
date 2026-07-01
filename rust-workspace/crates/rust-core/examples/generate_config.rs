@@ -1,9 +1,10 @@
 //! Generate config.toml and config.schema.json to examples/ directory.
 //!
-//! Run with: cargo run -p rust-core --example generate_config
+//! Run with: cargo run -p rust-core --example `generate_config`
 
 use std::path::PathBuf;
 
+use anyhow::Context as _;
 use rust_core::{APP_NAME, write_generated_files};
 
 /// Repository URL for schema $id.
@@ -16,7 +17,7 @@ fn main() -> anyhow::Result<()> {
     let workspace_root = crate_root
         .parent() // crates/
         .and_then(|p| p.parent()) // workspace root
-        .expect("could not find workspace root");
+        .context("finding workspace root from crate path")?;
 
     let examples_dir = workspace_root.join("examples");
 
