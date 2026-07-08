@@ -186,44 +186,50 @@ mod tests {
     const REPO_URL: &str = "https://github.com/byteowlz/rust-workspace";
 
     #[test]
-    fn test_schema_generation() {
-        let schema = generate_schema(APP_NAME, REPO_URL).expect("schema generation failed");
-        assert!(schema.contains("\"title\""));
-        assert!(schema.contains("rust-workspace configuration"));
-        assert!(schema.contains("\"$schema\""));
-        assert!(schema.contains("LogLevel"));
+    fn test_schema_generation() -> Result<()> {
+        let schema = generate_schema(APP_NAME, REPO_URL)?;
+        anyhow::ensure!(schema.contains("\"title\""), "schema title is missing");
+        anyhow::ensure!(
+            schema.contains("rust-workspace configuration"),
+            "schema description is missing"
+        );
+        anyhow::ensure!(schema.contains("\"$schema\""), "schema metadata is missing");
+        anyhow::ensure!(
+            schema.contains("LogLevel"),
+            "LogLevel definition is missing"
+        );
+        Ok(())
     }
 
     #[test]
-    fn test_config_generation() {
-        let config = generate_example_config(APP_NAME).expect("config generation failed");
-        assert!(config.contains("[logging]"));
-        assert!(config.contains("[runtime]"));
-        assert!(config.contains("$schema"));
+    fn test_config_generation() -> Result<()> {
+        let config = generate_example_config(APP_NAME)?;
+        anyhow::ensure!(config.contains("[logging]"), "logging section is missing");
+        anyhow::ensure!(config.contains("[runtime]"), "runtime section is missing");
+        anyhow::ensure!(config.contains("$schema"), "schema reference is missing");
+        Ok(())
     }
 
     #[test]
-    fn validate_examples_are_up_to_date() {
+    fn validate_examples_are_up_to_date() -> Result<()> {
         // Find the examples directory relative to the crate root
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")?;
         let crate_root = Path::new(&manifest_dir);
 
         // Walk up to find the workspace root with examples/
         let workspace_root = crate_root
             .parent() // crates/
             .and_then(|p| p.parent()) // workspace root
-            .expect("could not find workspace root");
+            .context("finding workspace root from crate path")?;
 
         let examples_dir = workspace_root.join("examples");
 
-        if !examples_dir.exists() {
-            panic!(
-                "examples/ directory not found at {}. Create it and run 'just generate-config'.",
-                examples_dir.display()
-            );
-        }
+        anyhow::ensure!(
+            examples_dir.exists(),
+            "examples/ directory not found at {}. Create it and run 'just generate-config'.",
+            examples_dir.display()
+        );
 
         validate_against_examples(&examples_dir, APP_NAME, REPO_URL)
-            .expect("examples/ files are out of date");
     }
 }
