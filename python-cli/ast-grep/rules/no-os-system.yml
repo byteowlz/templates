@@ -1,0 +1,6 @@
+id: no-os-system
+language: python
+severity: warning
+message: Prefer subprocess.run with explicit arguments over os.system.
+rule:
+  pattern: "os.system($CMD)"

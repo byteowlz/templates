@@ -1,0 +1,7 @@
+id: no-bare-except
+language: python
+severity: error
+message: Avoid bare except clauses. Catch a specific exception and handle it explicitly.
+rule:
+  kind: except_clause
+  regex: '^except:$'

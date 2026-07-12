@@ -1,0 +1,35 @@
+{
+  "todos": [
+    {
+      "id": "7535ef86",
+      "content": "Inspect template repo for current linting, tooling, and AI-agent guidance",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "8d2cc462",
+      "content": "Design and implement ast-grep strong linting integration",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "506043c1",
+      "content": "Improve template ergonomics and guardrails for AI agents",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "e1f3eb68",
+      "content": "Run validation commands and fix any issues",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "0a685441",
+      "content": "Document the changes made",
+      "status": "completed",
+      "priority": "medium"
+    }
+  ],
+  "updated_at": "2026-04-21T07:39:42.145Z"
+}

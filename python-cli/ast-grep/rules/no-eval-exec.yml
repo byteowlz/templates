@@ -1,0 +1,8 @@
+id: no-eval-exec
+language: python
+severity: error
+message: Do not use eval or exec in template code.
+rule:
+  any:
+    - pattern: "eval($$$ARGS)"
+    - pattern: "exec($$$ARGS)"

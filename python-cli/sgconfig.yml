@@ -1,0 +1,8 @@
+ruleDirs:
+  - ast-grep/rules
+
+languageGlobs:
+  python:
+    - python_cli/**/*.py
+    - tests/**/*.py
+    - scripts/**/*.py

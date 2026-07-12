@@ -1,0 +1,6 @@
+id: no-print-in-library
+language: python
+severity: warning
+message: Prefer Typer, Rich consoles, or structured render helpers over print in template code.
+rule:
+  pattern: "print($$$ARGS)"

@@ -1,0 +1,11 @@
+id: no-subprocess-shell-true
+language: python
+severity: error
+message: Avoid shell=True. Pass argv lists to subprocess APIs instead.
+rule:
+  any:
+    - pattern: "subprocess.run($$$ARGS, shell=True, $$$REST)"
+    - pattern: "subprocess.Popen($$$ARGS, shell=True, $$$REST)"
+    - pattern: "subprocess.call($$$ARGS, shell=True, $$$REST)"
+    - pattern: "subprocess.check_call($$$ARGS, shell=True, $$$REST)"
+    - pattern: "subprocess.check_output($$$ARGS, shell=True, $$$REST)"

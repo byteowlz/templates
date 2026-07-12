@@ -1,0 +1,8 @@
+id: no-breakpoint
+language: python
+severity: error
+message: Remove interactive debugging calls before committing template code.
+rule:
+  any:
+    - pattern: "breakpoint()"
+    - pattern: "pdb.set_trace()"
