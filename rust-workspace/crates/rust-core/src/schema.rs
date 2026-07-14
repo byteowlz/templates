@@ -81,7 +81,7 @@ pub fn generate_example_config(project_name: &str) -> Result<String> {
     let mut output = String::new();
     let _ = write!(
         output,
-        r#""$schema" = "{schema_url}"
+        r#"#:schema {schema_url}"
 
 # Configuration for {project_name}.
 # Copy this file to $XDG_CONFIG_HOME/{project_name}/config.toml and adjust as needed.
@@ -193,7 +193,7 @@ mod tests {
             schema.contains("rust-workspace configuration"),
             "schema description is missing"
         );
-        anyhow::ensure!(schema.contains("\"$schema\""), "schema metadata is missing");
+        anyhow::ensure!(schema.contains("#:schema"), "schema metadata is missing");
         anyhow::ensure!(
             schema.contains("LogLevel"),
             "LogLevel definition is missing"

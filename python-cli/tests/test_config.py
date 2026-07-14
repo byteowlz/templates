@@ -41,5 +41,5 @@ def test_ensure_default_config_writes_schema_reference(tmp_path: Path) -> None:
     content = written.read_text(encoding="utf-8")
 
     assert written == config_path
-    assert content.startswith(f'"$schema" = "{CONFIG_SCHEMA_URL}"')
+    assert content.startswith(f'#:schema {CONFIG_SCHEMA_URL}')
     assert "[logging]" in content
