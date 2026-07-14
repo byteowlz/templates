@@ -1,4 +1,4 @@
-"$schema" = "https://raw.githubusercontent.com/byteowlz/schemas/refs/heads/main/rust-cli/rust-cli.config.schema.json"
+#:schema https://raw.githubusercontent.com/byteowlz/schemas/refs/heads/main/rust-cli/rust-cli.config.schema.json
 
 # Configuration for rust-cli.
 # Copy this file to $XDG_CONFIG_HOME/rust-cli/config.toml and adjust as needed.
