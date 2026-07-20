@@ -27,6 +27,8 @@ Each template includes:
 
 - `justfile` - Standard commands (build, test, install, etc.)
 - `AGENTS.md` - AI agent instructions
+- `CONTEXT.md` - Project domain glossary starter
+- `docs/adr/` - Concise architecture decision guidance and template
 - `.github/workflows/release.yml` - Automated releases
 - Language-specific project files
 

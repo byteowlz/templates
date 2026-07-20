@@ -2,6 +2,14 @@
 
 Guidance for coding agents working on this Rust workspace template.
 
+## Domain and Architecture
+
+- Read `CONTEXT.md` before domain work and use its canonical terms consistently.
+- Update `CONTEXT.md` when domain language is resolved. Keep it a glossary only: no implementation details, specifications, or scratch notes.
+- Read `docs/adr/` before architectural changes.
+- Add an ADR only for a decision that is hard to reverse, surprising without context, and based on a real trade-off. Follow `docs/adr/README.md`.
+- If the repository grows into multiple bounded contexts, replace the root glossary with a `CONTEXT-MAP.md` that links to context-local `CONTEXT.md` files.
+
 ## Workspace Map
 
 ```
