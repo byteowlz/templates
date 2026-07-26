@@ -9,7 +9,7 @@ use rmcp::{
     ErrorData as McpError, ServerHandler, ServiceExt,
     handler::server::tool::ToolRouter,
     handler::server::wrapper::Parameters,
-    model::{CallToolResult, Content, ServerCapabilities, ServerInfo},
+    model::{CallToolResult, ContentBlock, ServerCapabilities, ServerInfo},
     schemars::JsonSchema,
     serde::{Deserialize, Serialize},
     tool, tool_handler, tool_router,
@@ -84,7 +84,7 @@ impl McpServer {
     /// Get the current configuration profile
     #[tool(description = "Returns the current configuration profile name")]
     async fn get_profile(&self) -> Result<CallToolResult, McpError> {
-        Ok(CallToolResult::success(vec![Content::text(
+        Ok(CallToolResult::success(vec![ContentBlock::text(
             self.config.profile.clone(),
         )]))
     }
@@ -95,7 +95,7 @@ impl McpServer {
         &self,
         Parameters(params): Parameters<EchoParams>,
     ) -> Result<CallToolResult, McpError> {
-        Ok(CallToolResult::success(vec![Content::text(format!(
+        Ok(CallToolResult::success(vec![ContentBlock::text(format!(
             "Echo: {}",
             params.message
         ))]))
@@ -106,11 +106,11 @@ impl McpServer {
     async fn get_runtime_config(&self) -> Result<CallToolResult, McpError> {
         let json =
             serde_json::to_string_pretty(&self.config.runtime).unwrap_or_else(|_| "{}".to_string());
-        Ok(CallToolResult::success(vec![Content::text(json)]))
+        Ok(CallToolResult::success(vec![ContentBlock::text(json)]))
     }
 }
 
-#[tool_handler]
+#[tool_handler(router = self.tool_router)]
 impl ServerHandler for McpServer {
     fn get_info(&self) -> ServerInfo {
         let mut info = ServerInfo::default();

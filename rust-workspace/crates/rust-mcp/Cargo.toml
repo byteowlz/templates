@@ -23,6 +23,8 @@ clap.workspace = true
 env_logger.workspace = true
 log.workspace = true
 rmcp.workspace = true
+# Direct dependency solely to hold the exact-version pin (see workspace Cargo.toml).
+rmcp-macros.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

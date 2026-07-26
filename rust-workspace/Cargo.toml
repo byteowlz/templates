@@ -49,7 +49,11 @@ tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace"] }
 
 # MCP
-rmcp = { version = "1.2", features = ["server", "transport-io"] }
+rmcp = { version = "2.2", features = ["server", "transport-io"] }
+# Pinned exactly and on purpose: rmcp declares rmcp-macros with a caret range, so
+# cargo will happily pair an older rmcp with newer macros that generate calls into
+# APIs it does not have. Bump this in lockstep with rmcp.
+rmcp-macros = "=2.2.0"
 
 # Schema generation
 schemars = "1.2"
