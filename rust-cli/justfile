@@ -79,8 +79,12 @@ lint-rust-ai-guardrails:
 fix:
     cargo clippy --fix --allow-dirty
 
-# Run all checks (fmt + clippy + ast-grep + test)
-check-all: fmt-check clippy lint-rust-ai-guardrails test
+# Regenerate examples/config.toml and examples/config.schema.json from structs
+generate-config:
+    cargo run --example generate_config
+
+# Run all checks (fmt + clippy + ast-grep + test) — also regenerates examples
+check-all: fmt-check clippy lint-rust-ai-guardrails generate-config test
 
 # === Documentation ===
 
@@ -114,6 +118,11 @@ release-tag VERSION:
     git push --tags
 
 # Set up GitHub secrets for automated releases (requires byt)
+# Enable the vendored byteowlz git hooks (relative core.hooksPath)
+setup-hooks:
+    git config core.hooksPath .githooks
+    @echo "git hooks wired: core.hooksPath=.githooks"
+
 setup-secrets:
     byt secrets setup {{project_name}}
 

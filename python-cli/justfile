@@ -114,5 +114,10 @@ release-tag VERSION:
     git push --tags
 
 # Set up GitHub secrets for automated releases (requires byt)
+# Enable the vendored byteowlz git hooks (relative core.hooksPath)
+setup-hooks:
+    git config core.hooksPath .githooks
+    @echo "git hooks wired: core.hooksPath=.githooks"
+
 setup-secrets:
     byt secrets setup {{project_name}}
