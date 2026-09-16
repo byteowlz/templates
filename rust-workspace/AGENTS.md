@@ -1,288 +1,131 @@
 # AGENTS.md
 
-Guidance for coding agents working on this Rust workspace template.
+Guidance for coding agents working on this Rust workspace template. This file is
+deliberately short: it keeps the enforceable boundaries and workflows, and points
+at machine-checked configuration instead of duplicating any inventory.
 
-## Domain and Architecture
+## Source of truth
 
-- Read `CONTEXT.md` before domain work and use its canonical terms consistently.
-- Update `CONTEXT.md` when domain language is resolved. Keep it a glossary only: no implementation details, specifications, or scratch notes.
-- Read `docs/adr/` before architectural changes.
-- Add an ADR only for a decision that is hard to reverse, surprising without context, and based on a real trade-off. Follow `docs/adr/README.md`.
-- If the repository grows into multiple bounded contexts, replace the root glossary with a `CONTEXT-MAP.md` that links to context-local `CONTEXT.md` files.
+Static facts about this repo are machine-checked, **not** copied here:
 
-## Workspace Map
+- Crate list, dependency versions, lint settings → the workspace `Cargo.toml`.
+  The authoritative enumeration is `cargo metadata --no-deps --format-version 1`.
+- Task commands → `just` (run `just` to list).
+- Issues → `trx` (see "Issue tracking" below).
+- Drift guard → `scripts/drift-check.sh` (verifies commands exist and that
+  documented crate/version references and the JSON/TOML-only constraint match
+  the real manifests). Run it after touching any manifest or doc claim.
 
-```
-Cargo.toml              # Workspace root: all deps pinned here, lint config
-crates/
-  rust-core/            # Shared library (the only lib crate)
-    src/config.rs       #   AppConfig, LoggingConfig, RuntimeConfig, PathsConfig
-    src/paths.rs        #   AppPaths, XDG resolution, write_default_config
-    src/error.rs        #   CoreError, Result type alias
-    src/schema.rs       #   JSON schema + example config generation & validation
-    src/lib.rs          #   Public re-exports, APP_NAME const, env_prefix(), default_parallelism()
-    examples/generate_config.rs  # Regenerates examples/ files from structs
-  rust-cli/             # CLI binary (clap derive, subcommands)
-  rust-tui/             # TUI binary (ratatui, crossterm)
-  rust-mcp/             # MCP server binary (rmcp 1.2, stdio transport)
-  rust-api/             # HTTP API binary (axum 0.8, tower-http)
-examples/
-  config.toml           # Generated example config (kept in sync by test)
-  config.schema.json    # Generated JSON schema (kept in sync by test)
-clippy.toml             # Clippy thresholds (complexity, doc-valid-idents)
-justfile                # Task runner commands
-release.toml            # cargo-release config (publish=false, push=false)
-TUI.md                  # TUI architecture patterns reference
-```
+If `cargo metadata`, `just list`, or `scripts/drift-check.sh` disagree with
+anything written below, the command is right and this file is wrong.
 
-**Dependency flow**: All four binaries depend on `rust-core`. No binary depends on another binary.
+## Domain and architecture
 
-## Core Principles
+- Read `CONTEXT.md` before domain work; keep it a glossary only.
+- Read `docs/adr/` before architectural changes; add an ADR only for hard-to-reverse
+  decisions with a real trade-off (`docs/adr/README.md`).
+- Layout: `crates/{{project_name}}-core` is the only library crate and the
+  dependency root; the four binaries (`-cli`, `-tui`, `-mcp`, `-api`) depend on
+  it but never on each other (`cargo metadata` is the map).
+- Never publish to a public registry without explicit user approval.
 
-- **Never publish** artifacts to public registries without explicit user approval.
-- We favor clean refactors over backwards compatibility; update existing code in place (no `FooV2` suffixes).
-- Target Windows 11, Linux, and macOS 14+ with the same behavior; no legacy OS shims.
-- Keep file headers minimal — no author or timestamp banners.
+## Strict lints
 
-## Rust Workflow
+`[workspace.lints.clippy]` is maximum-strictness. Key constraints:
 
-- Follow Clippy best practices: collapse trivial `if`s, inline `format!` arguments, and prefer method references over redundant closures.
-- When tests compare structures, assert on the full value instead of individual fields.
-- Run `cargo fmt` after code changes and `cargo test` for the touched crate. Invoke broader test or lint commands only if the user asks.
+- `unsafe_code = "forbid"`; `unwrap_used`, `expect_used`, `panic`, `todo`,
+  `unimplemented`, `dbg_macro`, `exit` = deny — propagate with `?`,
+  `anyhow::Result`, `.context("...")`.
+- Output macros (`print_*`) are allowed for CLIs/TUIs/APIs.
 
-## Strict Lint Configuration
+## Workflow
 
-The workspace uses **maximum-strictness Clippy lints** (see `[workspace.lints.clippy]` in root `Cargo.toml`). Key constraints:
+- Domain terms: use `CONTEXT.md`.
+- Add code: follow the crate's dominant pattern (CLI subcommands, MCP tools,
+  API handlers, TUI screens).
+- Config structs: after editing `crates/{{project_name}}-core/src/config.rs`, run
+  `just generate-config` (regenerates `examples/config.toml` + `.schema.json`);
+  the `validate_examples_are_up_to_date` test fails if you forget.
+- Before committing anything significant: `just check-all` (fmt + clippy + test).
+- Run `scripts/drift-check.sh` after touching manifests or versioned claims.
 
-- `unsafe_code = "forbid"` — no unsafe anywhere
-- `unwrap_used`, `expect_used`, `panic` = "deny" — use `?`, `anyhow::Result`, or `ok_or_else`
-- `allow_attributes` = "deny" — cannot add `#[allow(...)]` to suppress warnings
-- `dbg_macro`, `todo`, `unimplemented` = "deny" — no placeholder code
-- `exit` = "deny" — return errors from `main()` instead
-- `print_stdout/print_stderr` = "allow" — CLIs/TUIs/APIs need output
+## Application formats: JSON and TOML only
 
-**When adding new code**: use `anyhow::Result<()>` for fallible functions, propagate errors with `?`, use `.context("message")?` for better error messages. Never `unwrap()`.
+- Configuration and machine output are **JSON or TOML only**. Never add a YAML
+  output mode, a YAML dependency, or a YAML example.
+- Root `config` crate runs with `default-features = false` and only the
+  `json`/`toml` features — keep it that way (no `yaml` feature).
+- Do **not** introduce `serde_yaml` or any YAML crate. `scripts/drift-check.sh`
+  enforces this in CI-style runs.
 
-## Config Schema Workflow
+## HTTP API service ({{project_name}}-api)
 
-When you modify `AppConfig` or any config struct in `rust-core/src/config.rs`:
+- The default scaffold exposes only non-sensitive endpoints (`GET /` and
+  `GET /health`) and configures **no CORS layer** and **no config endpoint**.
+- Never expose configuration (which may hold secrets) over the wire. If CORS is
+  genuinely required, opt into an exact-origin `CorsLayer`, never `Any`.
+- Privilege boundaries and secret migration follow the rules in
+  `scripts/privilege-boundary-test.sh` (separate executors, explicit modes,
+  ancestor ACLs, credential rotation) and its guardrail section below.
 
-1. Run `just generate-config` to regenerate `examples/config.toml` and `examples/config.schema.json`
-2. The test `validate_examples_are_up_to_date` will fail if you forget this step
-3. Run `just test` to verify
+### Privilege-boundary guardrails (services)
 
-## Common Agent Tasks
+When a service creates files, holds credentials, or migrates secrets:
 
-### Adding a new CLI subcommand
+1. **Separate executors**: privilege-lowering or -raising work runs in a distinct
+   executor/process whose ambient privileges are explicit — never silently in the
+   calling request thread.
+2. **Ownership/ACL, including ancestor dirs**: set and assert ownership and ACL
+   on the target *and every ancestor* it creates; a writable-by-others parent
+   defeats a locked file.
+3. **Explicit file modes, independent of umask**: create with an explicit mode
+   (`open(..., 0o600)`, `std::os::unix::fs::OpenOptionsExt::mode`, or
+   `set_permissions`) so a permissive umask cannot widen it. Never rely on the
+   process umask.
+4. **Credential rotation during privilege migration**: when a secret's location
+   or owner changes, write the new value under a lock before removing the old,
+   and destroy the old copy (don't just move the filename).
+5. **Negative cross-user tests**: assert that an unprivileged/other user *cannot*
+   read or write the protected resource (403/EACCES), not just that the owner can.
+6. **Distinguish unit/API checks from OS enforcement**: in-process checks (role,
+   route) are unit-level; ownership/ACL/mode are OS-level and must be asserted
+   with real filesystem integration tests, not mocks.
 
-1. Add a variant to the `Command` enum in `crates/rust-cli/src/main.rs`
-2. Add a corresponding `#[derive(Debug, Args)]` struct for its arguments
-3. Add a `handle_*` function and wire it in `try_main()`
-4. Support `--json`/`--yaml` output in the handler
+`scripts/privilege-boundary-test.sh` is the reusable acceptance harness for (2)–(5).
 
-### Adding a new MCP tool
+## MCP ({{project_name}}-mcp)
 
-1. Add a method to the `#[tool_router] impl McpServer` block in `crates/rust-mcp/src/main.rs`
-2. Use `#[tool(description = "...")]` attribute
-3. Define a params struct with `#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]`
-4. Accept params as `Parameters(params): Parameters<YourParams>`
-5. Return `Result<CallToolResult, McpError>`
-6. The tool is auto-registered via the `tool_router` macro — no manual registration needed
+- Uses `rmcp`; version is **pinned and documented in the root `Cargo.toml`**
+  (which also pins `rmcp-macros` in lockstep — bump both together). Read the
+  actual version there; never trust a version written in prose.
+- `#[tool_router]` on the impl auto-registers tools; `ServerInfo` is
+  non-exhaustive (mutate fields after `default()`).
 
-### Adding a new API endpoint
+## Configuration & storage
 
-1. Add a handler function in `crates/rust-api/src/main.rs`
-2. Add the route in the `Router::new()` chain
-3. Use `State(state): State<AppState>` to access config
+- XDG paths; expand `~` and env vars; ship a commented example under `examples/`,
+  write a default on first run, override via the `config` crate.
+- Env override prefix is derived from `APP_NAME` in `{{project_name}}-core` as
+  `upper(PKG_NAME).replace('-', "_")`. Reference `APP_NAME`/`env_prefix()`
+  rather than hardcoding a literal string.
 
-### Adding a config field
+## Issue tracking (trx)
 
-1. Add the field to the appropriate struct in `crates/rust-core/src/config.rs`
-2. Add `#[schemars(...)]` annotations for schema metadata
-3. Set a default in the `Default` impl
-4. Run `just generate-config` to update example files
-5. Run `just test` to verify
-
-## CLI Expectations
-
-- Prefer subcommands for verbs and keep outputs quiet/verbose via standard flags (`-q`, chainable `-v`, `--debug`, `--trace`).
-- Support machine-readable modes via `--json/--yaml` and honor NO_COLOR/FORCE_COLOR.
-- Offer `--dry-run`, `--yes/--force`, `--no-progress`, `--timeout`, and `--parallel` when operations warrant them.
-- Generate help quickly (`-h/--help`) and provide shell completions off the same Clap definitions.
-
-## MCP Crate (rmcp 1.2)
-
-The MCP server uses the official `rmcp` crate (Rust SDK for Model Context Protocol).
-
-**Key patterns:**
-- `#[tool_router]` on impl block auto-generates tool routing
-- `#[tool_handler]` on `ServerHandler` impl wires tools into the server
-- `ServerInfo` is non-exhaustive — use `let mut info = ServerInfo::default(); info.field = value;`
-- Transport: `rmcp::transport::io::stdio()` for stdio-based MCP
-- Re-exports: `rmcp::schemars::JsonSchema` and `rmcp::serde::{Serialize, Deserialize}` are available
-
-## Configuration & Storage
-
-- Use XDG directories when available: config at `$XDG_CONFIG_HOME/<app>/config.toml`, data at `$XDG_DATA_HOME/<app>`, state at `$XDG_STATE_HOME/<app>` with sensible fallbacks (e.g., `~/.config`).
-- Expand `~` and environment variables in config paths.
-- Ship a commented example under `examples/`, create a default config on first run, and load overrides via the `config` crate.
-- Environment variable override prefix: `RUST_WORKSPACE__` (double underscore for nesting, e.g., `RUST_WORKSPACE__LOGGING__LEVEL=debug`).
-
-## House Rules
-
-- Do exactly what the user asks — no unsolicited files or docs.
-- Keep README updates concise, emoji-free, and only when requested.
-- Never commit secrets or sensitive paths; scrub logs before surfacing them.
-
-## Justfile Commands
-
-This project uses [just](https://github.com/casey/just) as a command runner. Run `just` to see available commands.
-
-**Core commands:**
+Use `trx` for all issue tracking — never markdown TODOs or `.beads`.
 
 ```bash
-just              # Show available commands
-just install-all  # Install all binaries
-just install-crate CRATE # Install specific crate
-just build        # Debug build (all crates)
-just build-release # Release build (all crates)
-just test         # Run all tests
-just fmt          # Format all code
-just clippy       # Run linter on all crates
-just check-all    # Format + lint + test
+trx ready --json                                   # find unblocked work
+trx create "Title" -t task -p 2 --json             # create (bug/feature/task/epic/chore)
+trx update <id> --status in_progress --json        # claim
+trx close <id> -r "reason" --json                  # complete with reason
 ```
 
-**Workspace navigation:**
+Priorities: 0=critical, 1=high, 2=medium (default), 3=low, 4=backlog.
+Issue state lives in `.trx/` (JSONL) — commit it with code changes.
 
-```bash
-just list         # List all crates
-just list-bins    # List binary crates
-just list-libs    # List library crates
-just build-crate CRATE  # Build specific crate
-just test-crate CRATE   # Test specific crate
-just clippy-crate CRATE # Lint specific crate
-```
+## House rules
 
-**Development workflow:**
-
-```bash
-just check        # Fast compile check
-just fix          # Auto-fix clippy warnings
-just docs         # Generate documentation
-just update       # Update dependencies
-```
-
-Always run `just check-all` before committing significant changes.
-
-## Issue Tracking (trx)
-
-Use `trx` for all issue tracking. Do NOT use markdown TODOs or external trackers.
-
-```bash
-trx ready --json                              # Find unblocked work
-trx create "Title" -t task -p 2 --json        # Create issue (types: bug/feature/task/epic/chore)
-trx update <id> --status in_progress --json   # Claim task
-trx close <id> --reason "Done" --json         # Complete work
-```
-
-Priorities: 0=critical, 1=high, 2=medium (default), 3=low, 4=backlog
-
-Always commit `.beads/issues.jsonl` with code changes.
-
-## Memory System (agntz memory)
-
-Use `agntz memory` to store and retrieve project knowledge. Memories auto-detect the current repo.
-
-**Adding memories:**
-
-```bash
-agntz memory add "Important decision or learning"              # Auto-detects current repo
-agntz memory add "Cross-repo architecture decision" --govnr    # Force govnr store
-agntz memory add "Specific insight" -c "architecture" -i 8     # With category and importance
-```
-
-**Searching memories:**
-
-```bash
-agntz memory search "query"           # Search current repo's memories
-agntz memory search "query" --govnr   # Search cross-repo memories
-agntz memory search "query" --all     # Search ALL projects
-```
-
-**When to add memories:**
-
-- Architecture decisions and their rationale
-- Non-obvious solutions to tricky problems
-- Integration patterns with other byteowlz repos
-- Performance findings or benchmarks
-- API contracts or breaking changes
-
-**When to search memories:**
-
-- Before starting work on a feature (check for prior decisions)
-- When encountering unfamiliar code patterns
-- When integrating with other repos (`agntz memory search "query" --all`)
-
-## Releases & Distribution
-
-This project uses GitHub Actions for automated releases. See `.github/workflows/release.yml`.
-
-**Creating a release:**
-
-```bash
-# Tag-based (automatic trigger)
-git tag v1.0.0 && git push --tags
-
-# Manual trigger via CLI
-gh workflow run release.yml -f tag=v1.0.0
-```
-
-**What the workflow builds:**
-
-- Linux x86_64 (ubuntu-latest)
-- macOS x86_64 (cross-compiled from macos-14 ARM64)
-- macOS ARM64 (macos-14)
-- Windows x86_64 (if enabled)
-
-**Disabled by default (uncomment in workflow if needed):**
-
-- Linux ARM64: Requires `Cross.toml` with OpenSSL configuration
-- Windows: May have C runtime mismatch issues with some crates
-
-**Platform notes:**
-
-- `macos-13` runner is retired - always use `macos-14`
-- For protobuf projects: uncomment the protoc installation steps
-- For ML projects: uncomment `--features coreml` for Apple Silicon
-- Workspace builds package all binaries matching `{{project_name}}*`
-
-**Required secrets for package managers:**
-
-- `TAP_GITHUB_TOKEN` - PAT with repo access to byteowlz/homebrew-tap
-- `AUR_SSH_PRIVATE_KEY` - SSH key registered with AUR
-- `AUR_EMAIL` - Email for AUR commits
-
-Use `byt secrets setup <repo>` to configure secrets.
-
-**Installation methods (once published):**
-
-```bash
-# Homebrew (macOS/Linux)
-brew install byteowlz/tap/<binary-name>
-
-# AUR (Arch Linux)
-yay -S <binary-name>
-
-# Scoop (Windows)
-scoop bucket add byteowlz https://github.com/byteowlz/scoop-bucket
-scoop install <binary-name>
-```
-
----
-
-## Supply Chain Security
-
-- **Lock files**: `Cargo.lock` is committed and pins exact versions. Always commit lock file changes.
-- **Audit regularly**: Run `cargo audit` to check for known vulnerabilities in dependencies.
-- **Vet crates**: Consider `cargo-vet` to track which crates have been reviewed.
-- **Minimal dependencies**: Favour std library before adding third-party crates. Rust crates have no install scripts (lower risk than npm/PyPI), but transitive deps still matter.
+- Do exactly what the user asks — no unsolicited files.
+- Keep README updates concise and emoji-free.
+- Never commit secrets or sensitive paths; scrub logs.
+- `Cargo.lock` is committed; bump manifests + lock together.

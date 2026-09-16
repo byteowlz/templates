@@ -65,20 +65,41 @@ try {
 
     Copy-Template -Source $templateRoot -Dest $destination
 
-    $replacements = @(
-        'Cargo.toml',
-        'Cargo.lock',
-        'README.md',
-        'examples/config.toml'
+    $underscore = $Name -replace '-', '_'
+    $upper = $Name.ToUpper() -replace '-', '_'
+
+    $textExtensions = @(
+        '.toml', '.md', '.rs', '.json', '.yml', '.yaml', '.sh', '.ps1',
+        '.gitignore', '.txt', '.cfg', '.lock'
     )
 
-    foreach ($relative in $replacements) {
-        $filePath = Join-Path -Path $destination -ChildPath $relative
-        if (Test-Path -LiteralPath $filePath) {
-            $content = Get-Content -LiteralPath $filePath -Raw
-            $upperName = $Name.ToUpper() -replace '-', '_'
-            $updated = $content -replace 'rust-cli', $Name -replace 'RUST_CLI', $upperName
-            Set-Content -LiteralPath $filePath -Value $updated -Encoding UTF8
+    function Replace-InFile {
+        param([string]$FilePath)
+
+        try {
+            $fullText = Get-Content -LiteralPath $FilePath -Raw -Encoding UTF8
+        } catch {
+            return
+        }
+        # .Replace is case-sensitive literal replacement (unlike -replace).
+        $updated = $fullText
+            .Replace('rust-cli', $Name)
+            .Replace('rust_cli', $underscore)
+            .Replace('RUST_CLI', $upper)
+            .Replace('{{project_name}}', $Name)
+            .Replace('your-binary-name', $Name)
+        if ($updated -ne $fullText) {
+            Set-Content -LiteralPath $FilePath -Value $updated -Encoding UTF8
+        }
+    }
+
+    Get-ChildItem -LiteralPath $destination -Recurse -File -Force | ForEach-Object {
+        # Keep the scaffolding/tooling scripts' own replacement tables intact.
+        if ($_.Name -in @('new-cli.sh', 'new-cli.ps1', 'smoke-test.sh', 'drift-check.sh')) {
+            return
+        }
+        if ($textExtensions -contains $_.Extension.ToLower()) {
+            Replace-InFile -FilePath $_.FullName
         }
     }
 

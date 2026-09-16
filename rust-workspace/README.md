@@ -14,10 +14,10 @@ cargo test
 Run individual binaries:
 
 ```bash
-cargo run -p rust-cli -- run
-cargo run -p rust-tui
-cargo run -p rust-api -- --port 3000
-cargo run -p rust-mcp
+cargo run -p {{project_name}}-cli -- run
+cargo run -p {{project_name}}-tui
+cargo run -p {{project_name}}-api -- --port 3000
+cargo run -p {{project_name}}-mcp
 ```
 
 Scaffold a new project:
@@ -36,11 +36,11 @@ This creates a new workspace with all crates renamed (e.g., `my-app-core`, `my-a
 
 ```
 crates/
-  rust-core/    # Shared library: config, paths, error types
-  rust-cli/     # Command-line interface
-  rust-tui/     # Terminal user interface (ratatui)
-  rust-mcp/     # Model Context Protocol server
-  rust-api/     # HTTP API server (axum)
+  {{project_name}}-core/    # Shared library: config, paths, error types
+  {{project_name}}-cli/     # Command-line interface
+  {{project_name}}-tui/     # Terminal user interface (ratatui)
+  {{project_name}}-mcp/     # Model Context Protocol server
+  {{project_name}}-api/     # HTTP API server (axum)
 examples/
   config.toml   # Example configuration
 scripts/
@@ -50,26 +50,26 @@ scripts/
 
 ## Crates
 
-### rust-core
+### {{project_name}}-core
 
 Shared library providing:
 - `AppConfig` - Configuration loading via `config` crate
 - `AppPaths` - XDG-compliant path resolution
 - Error types and common utilities
 
-### rust-cli
+### {{project_name}}-cli
 
 Command-line interface with:
 - Subcommands: `run`, `init`, `config`, `completions`
-- Global flags: `-q`, `-v`, `--debug`, `--trace`, `--json`, `--yaml`, `--no-color`, `--dry-run`, `--yes`
+- Global flags: `-q`, `-v`, `--debug`, `--trace`, `--json`, `--no-color`, `--dry-run`, `--yes`
 - Shell completion generation
 
 ```bash
-cargo run -p rust-cli -- --help
-cargo run -p rust-cli -- completions bash > target/rust-cli.bash
+cargo run -p {{project_name}}-cli -- --help
+cargo run -p {{project_name}}-cli -- completions bash > target/{{project_name}}-cli.bash
 ```
 
-### rust-tui
+### {{project_name}}-tui
 
 Terminal UI built with ratatui featuring:
 - Three-pane layout (navigation, list, details)
@@ -77,10 +77,10 @@ Terminal UI built with ratatui featuring:
 - Modal help system
 
 ```bash
-cargo run -p rust-tui
+cargo run -p {{project_name}}-tui
 ```
 
-### rust-mcp
+### {{project_name}}-mcp
 
 MCP (Model Context Protocol) server exposing tools:
 - `get_profile` - Current configuration profile
@@ -88,18 +88,22 @@ MCP (Model Context Protocol) server exposing tools:
 - `get_runtime_config` - Runtime configuration
 
 ```bash
-cargo run -p rust-mcp
+cargo run -p {{project_name}}-mcp
 ```
 
-### rust-api
+### {{project_name}}-api
 
-HTTP API server (axum) with endpoints:
+HTTP API server (axum) with non-sensitive endpoints:
 - `GET /` - Service info
 - `GET /health` - Health check
-- `GET /config` - Current configuration
+
+The default scaffold exposes **no configuration endpoint** and configures **no
+CORS layer**; configuration (which may later hold secrets) is never served over
+the wire. If a browser client needs cross-origin access, add an explicit,
+exact-origin `CorsLayer` and keep it scoped to required origins.
 
 ```bash
-cargo run -p rust-api -- --port 3000
+cargo run -p {{project_name}}-api -- --port 3000
 curl http://localhost:3000/health
 ```
 
@@ -110,7 +114,7 @@ Default config path: `$XDG_CONFIG_HOME/rust-workspace/config.toml`
 Override with `--config <path>` or environment variables using the `RUST_WORKSPACE__` prefix:
 
 ```bash
-RUST_WORKSPACE__LOGGING__LEVEL=debug cargo run -p rust-cli -- run
+RUST_WORKSPACE__LOGGING__LEVEL=debug cargo run -p {{project_name}}-cli -- run
 ```
 
 See `examples/config.toml` for all options.

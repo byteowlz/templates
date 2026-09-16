@@ -66,57 +66,70 @@ try {
 
     Copy-Template -Source $templateRoot -Dest $destination
 
-    # Replacement values
-    $oldWorkspace = 'rust-workspace'
-    $oldPrefix = 'rust-'
-    $newPrefix = "$Name-"
-    $oldEnvPrefix = 'RUST_WORKSPACE'
-    $newEnvPrefix = $Name.ToUpper() -replace '-', '_'
+    # Replacement values.
+    $underscore = $Name -replace '-', '_'
+    $upper = $Name.ToUpper() -replace '-', '_'
 
-    # Files to update
-    $filesToUpdate = @(
-        'Cargo.toml',
-        'Cargo.lock',
-        'README.md',
-        'AGENTS.md',
-        'TUI.md',
-        'examples/config.toml'
+    # Exact names only: `rust-magic-linter` (lint preset) and `dtolnay/rust-toolchain`
+    # (CI action) must stay untouched, so do NOT do a generic `rust-` rewrite.
+    $textExtensions = @(
+        '.toml', '.md', '.rs', '.json', '.yml', '.yaml', '.sh', '.ps1',
+        '.gitignore', '.txt', '.cfg', '.lock'
     )
 
-    # Add crate files
+    function Replace-InFile {
+        param([string]$FilePath)
+
+        try {
+            $fullText = Get-Content -LiteralPath $FilePath -Raw -Encoding UTF8
+        } catch {
+            return
+        }
+        # .Replace is case-sensitive literal replacement.
+        $updated = $fullText
+            .Replace('rust-workspace', $Name)
+            .Replace('RUST_WORKSPACE', $upper)
+            .Replace('{{project_name}}-core', "$Name-core")
+            .Replace('{{project_name}}-cli', "$Name-cli")
+            .Replace('{{project_name}}-tui', "$Name-tui")
+            .Replace('{{project_name}}-mcp', "$Name-mcp")
+            .Replace('{{project_name}}-api', "$Name-api")
+            .Replace('{{project_name}}_core', "$underscore`_core")
+            .Replace('{{project_name}}_cli', "$underscore`_cli")
+            .Replace('{{project_name}}_tui', "$underscore`_tui")
+            .Replace('{{project_name}}_mcp', "$underscore`_mcp")
+            .Replace('{{project_name}}_api', "$underscore`_api")
+            .Replace('{{project_name}}', $Name)
+            .Replace('your-binary-name', $Name)
+        if ($updated -ne $fullText) {
+            Set-Content -LiteralPath $FilePath -Value $updated -Encoding UTF8
+        }
+    }
+
+    # Update file contents across the whole tree, keeping the scaffolding
+    # scripts' own replacement table intact.
+    Get-ChildItem -LiteralPath $destination -Recurse -File -Force | ForEach-Object {
+        if ($_.Name -in @('new-cli.sh', 'new-cli.ps1', 'smoke-test.sh', 'drift-check.sh', 'privilege-boundary-test.sh')) {
+            return
+        }
+        if ($textExtensions -contains $_.Extension.ToLower()) {
+            Replace-InFile -FilePath $_.FullName
+        }
+    }
+
+    # Rename crate directories ({{project_name}}-core -> <name>-core, etc.; older
+    # templates carried rust-* -> <name>-core).
     $cratesDir = Join-Path -Path $destination -ChildPath 'crates'
     if (Test-Path -LiteralPath $cratesDir) {
         Get-ChildItem -LiteralPath $cratesDir -Directory | ForEach-Object {
-            $filesToUpdate += "crates/$($_.Name)/Cargo.toml"
-            $mainRs = "crates/$($_.Name)/src/main.rs"
-            $libRs = "crates/$($_.Name)/src/lib.rs"
-            if (Test-Path -LiteralPath (Join-Path -Path $destination -ChildPath $mainRs)) {
-                $filesToUpdate += $mainRs
+            $n = $_.Name
+            if ($n.Contains('{{project_name}}')) {
+                $newName = $n.Replace('{{project_name}}', $Name)
+            } elseif ($n.StartsWith('rust-')) {
+                $newName = "$Name-" + $n.Substring('rust-'.Length)
+            } else {
+                return
             }
-            if (Test-Path -LiteralPath (Join-Path -Path $destination -ChildPath $libRs)) {
-                $filesToUpdate += $libRs
-            }
-        }
-    }
-
-    # Update file contents
-    foreach ($relative in $filesToUpdate) {
-        $filePath = Join-Path -Path $destination -ChildPath $relative
-        if (Test-Path -LiteralPath $filePath) {
-            $content = Get-Content -LiteralPath $filePath -Raw
-            $updated = $content `
-                -replace [regex]::Escape($oldWorkspace), $Name `
-                -replace [regex]::Escape($oldPrefix), $newPrefix `
-                -replace [regex]::Escape($oldEnvPrefix), $newEnvPrefix
-            Set-Content -LiteralPath $filePath -Value $updated -Encoding UTF8
-        }
-    }
-
-    # Rename crate directories
-    if (Test-Path -LiteralPath $cratesDir) {
-        Get-ChildItem -LiteralPath $cratesDir -Directory | Where-Object { $_.Name.StartsWith($oldPrefix) } | ForEach-Object {
-            $newName = $newPrefix + $_.Name.Substring($oldPrefix.Length)
-            $newPath = Join-Path -Path $cratesDir -ChildPath $newName
             Rename-Item -LiteralPath $_.FullName -NewName $newName
         }
     }

@@ -1,5 +1,5 @@
 [package]
-name = "rust-tui"
+name = "{{project_name}}-api"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,23 +7,24 @@ repository.workspace = true
 readme.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "TUI interface for the rust-workspace template"
+description = "HTTP API server for the rust-workspace template"
 
 [lints]
 workspace = true
 
 [[bin]]
-name = "rust-tui"
+name = "{{project_name}}-api"
 path = "src/main.rs"
 
 [dependencies]
-rust-core.workspace = true
-byteowlz-tui-kit.workspace = true
+{{project_name}}-core.workspace = true
 anyhow.workspace = true
+axum.workspace = true
 clap.workspace = true
-crossterm.workspace = true
 env_logger.workspace = true
 log.workspace = true
-ratatui.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 tokio.workspace = true
+tower = { workspace = true, features = ["util"] }
+tower-http.workspace = true

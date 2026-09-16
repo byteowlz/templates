@@ -1,0 +1,18 @@
+# golangci-lint configuration — enforced locally via `just lint` and in CI.
+# Reference: https://golangci-lint.run/usage/configuration/
+
+linters:
+  enable:
+    - gocyclo     # McCabe cyclomatic complexity
+    - gocognit    # Cognitive complexity
+    - cyclop      # Package-level cyclomatic complexity + cognitive budget
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  gocognit:
+    min-complexity: 15
+  cyclop:
+    max-complexity: 15
+    package-average: 0.0
+    skip-tests: true

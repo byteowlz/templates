@@ -267,7 +267,7 @@ mod tests {
             schema.contains("rust-cli configuration"),
             "schema description is missing"
         );
-        anyhow::ensure!(schema.contains("#:schema"), "schema metadata is missing");
+        anyhow::ensure!(schema.contains("\"$schema\""), "schema metadata is missing");
         Ok(())
     }
 
@@ -276,7 +276,7 @@ mod tests {
         let config = generate_example_config(APP_NAME)?;
         anyhow::ensure!(config.contains("[logging]"), "logging section is missing");
         anyhow::ensure!(config.contains("[runtime]"), "runtime section is missing");
-        anyhow::ensure!(config.contains("$schema"), "schema reference is missing");
+        anyhow::ensure!(config.contains("#:schema"), "schema reference is missing");
         Ok(())
     }
 

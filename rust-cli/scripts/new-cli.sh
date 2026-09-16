@@ -6,7 +6,12 @@ usage() {
   cat <<'USAGE'
 Usage: new-cli.sh <name> [--path DIR]
 
-Create a new CLI project by cloning the current template into DIR (defaults to <name>).
+Create a new CLI project by cloning this template into DIR (defaults to <name>).
+
+Renames the crate, its code identifier, environment prefix, and every
+project-identity reference (README, config paths, schema URLs, CI, justfile)
+from the template defaults to <name>. Rust imports use the underscored form,
+so this script rewrites both `rust-cli` and `rust_cli`.
 
 Options:
   -h, --help      Show this message
@@ -97,22 +102,44 @@ import sys
 name = sys.argv[1]
 dest = pathlib.Path(sys.argv[2])
 
-def replace(path: pathlib.Path):
-    text = path.read_text()
-    text = text.replace("rust-cli", name)
-    text = text.replace("RUST_CLI", name.upper().replace("-", "_"))
-    path.write_text(text)
+underscore = name.replace('-', '_')
+upper = name.upper().replace('-', '_')
 
-files = [
-    dest / "Cargo.toml",
-    dest / "Cargo.lock",
-    dest / "README.md",
-    dest / "examples" / "config.toml",
+# Order matters: replace the exact package name and env prefix before the
+# shorter hyphenated shorthand, and replace the underscored crate identifier
+# (used in `use rust_cli::...` imports) that byt-era scaffolding missed.
+replacements = [
+    ("rust-cli", name),
+    ("rust_cli", underscore),
+    ("RUST_CLI", upper),
+    ("{{project_name}}", name),
+    ("your-binary-name", name),
 ]
 
-for file in files:
-    if file.exists():
-        replace(file)
+def is_text(path: pathlib.Path) -> bool:
+    try:
+        path.read_bytes().decode('utf-8')
+        return True
+    except (UnicodeDecodeError, OSError):
+        return False
+
+def apply(path: pathlib.Path) -> None:
+    if not path.is_file() or not is_text(path):
+        return
+    # Do not rewrite the scaffolding/tooling scripts themselves: their embedded
+    # replacement tables and token lists must stay intact so they remain reusable
+    # after copying.
+    if path.name in ('new-cli.sh', 'new-cli.ps1', 'smoke-test.sh', 'drift-check.sh'):
+        return
+    text = path.read_text()
+    original = text
+    for old, new in replacements:
+        text = text.replace(old, new)
+    if text != original:
+        path.write_text(text)
+
+for path in dest.rglob('*'):
+    apply(path)
 PY
 
 echo "Created CLI project at $DEST"

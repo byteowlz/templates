@@ -1,0 +1,59 @@
+{
+  "todos": [
+    {
+      "id": "6d318882",
+      "content": "Read full details for all 6 issues",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "3c6e89e2",
+      "content": "Investigate scaffolding + grep patterns",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "ba334385",
+      "content": "Rust templates: remove YAML dep/output, config json/toml only (tmpl-91k8, tmpl-mjwv)",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "0f74fd5f",
+      "content": "Rust templates: replace bd/beads with trx; JSON/TOML guardrails (tmpl-mjwv)",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "a4f477e1",
+      "content": "Streamline AGENTS.md both rust templates + drift-check script (tmpl-8adx)",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "42a7ef99",
+      "content": "Secure API defaults + regression test (tmpl-h7h7)",
+      "status": "in_progress",
+      "priority": "high"
+    },
+    {
+      "id": "a7c57605",
+      "content": "Privilege-boundary tests + anchored secret migration guardrails + acceptance harness (tmpl-tkm2)",
+      "status": "in_progress",
+      "priority": "high"
+    },
+    {
+      "id": "0b349103",
+      "content": "Fix new-cli.sh substitution (underscores + identity) + smoke fixture (tmpl-d9wd)",
+      "status": "in_progress",
+      "priority": "high"
+    },
+    {
+      "id": "e0637a14",
+      "content": "Verify builds/tests (rust-workspace build+test, smoke), close all issues",
+      "status": "in_progress",
+      "priority": "high"
+    }
+  ],
+  "updated_at": "2026-09-14T09:29:40.254Z"
+}

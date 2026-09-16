@@ -10,8 +10,8 @@ use clap_complete::Shell;
 use env_logger::fmt::WriteStyle;
 use log::{LevelFilter, debug, info};
 
-use rust_core::paths::write_default_config;
-use rust_core::{AppConfig, AppPaths, default_cache_dir, default_parallelism};
+use {{project_name}}_core::paths::write_default_config;
+use {{project_name}}_core::{AppConfig, AppPaths, default_cache_dir, default_parallelism};
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
 
@@ -70,11 +70,8 @@ pub struct CommonOpts {
     #[arg(long, global = true)]
     pub trace: bool,
     /// Output machine readable JSON
-    #[arg(long, global = true, conflicts_with = "yaml")]
-    pub json: bool,
-    /// Output machine readable YAML
     #[arg(long, global = true)]
-    pub yaml: bool,
+    pub json: bool,
     /// Disable ANSI colors in output
     #[arg(long = "no-color", global = true, conflicts_with = "color")]
     pub no_color: bool,
@@ -252,8 +249,6 @@ fn handle_run(ctx: &RuntimeContext, cmd: RunCommand) -> Result<()> {
     let effective = ctx.config.clone().with_profile_override(cmd.profile);
     let output = if ctx.common.json {
         serde_json::to_string_pretty(&effective).context("serializing run output to JSON")?
-    } else if ctx.common.yaml {
-        serde_yaml::to_string(&effective).context("serializing run output to YAML")?
     } else {
         format!(
             "Running task '{}' with profile '{}' (parallelism: {})",
@@ -298,11 +293,6 @@ fn handle_config(ctx: &RuntimeContext, command: ConfigCommand) -> Result<()> {
                     serde_json::to_string_pretty(&ctx.config)
                         .context("serializing config to JSON")?
                 );
-            } else if ctx.common.yaml {
-                println!(
-                    "{}",
-                    serde_yaml::to_string(&ctx.config).context("serializing config to YAML")?
-                );
             } else {
                 println!("{:#?}", ctx.config);
             }
@@ -324,17 +314,6 @@ fn handle_config(ctx: &RuntimeContext, command: ConfigCommand) -> Result<()> {
                 println!(
                     "{}",
                     serde_json::to_string_pretty(&paths).context("serializing paths to JSON")?
-                );
-            } else if ctx.common.yaml {
-                let paths = serde_json::json!({
-                    "config": ctx.paths.config_file,
-                    "data": ctx.paths.data_dir,
-                    "state": ctx.paths.state_dir,
-                    "cache": cache_dir,
-                });
-                println!(
-                    "{}",
-                    serde_yaml::to_string(&paths).context("serializing paths to YAML")?
                 );
             } else {
                 println!("config: {}", ctx.paths.config_file.display());

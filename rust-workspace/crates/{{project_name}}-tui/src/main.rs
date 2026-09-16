@@ -124,7 +124,7 @@ impl App {
 }
 
 #[derive(Parser)]
-#[command(name = "rust-tui", version, about = "Reference byteowlz TUI")]
+#[command(name = "{{project_name}}-tui", version, about = "Reference byteowlz TUI")]
 struct Cli {}
 
 /// The top-level flow signal.

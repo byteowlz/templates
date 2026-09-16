@@ -1,11 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/rust-core",
-    "crates/rust-cli",
-    "crates/rust-tui",
-    "crates/rust-mcp",
-    "crates/rust-api",
+    "crates/{{project_name}}-core",
+    "crates/{{project_name}}-cli",
+    "crates/{{project_name}}-tui",
+    "crates/{{project_name}}-mcp",
+    "crates/{{project_name}}-api",
     "crates/byteowlz-tui-kit",
 ]
 
@@ -24,11 +24,10 @@ anyhow = "1.0"
 thiserror = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_yaml = "0.9"
 toml = "0.9"
 log = "0.4"
 env_logger = "0.11"
-config = { version = "0.15", features = ["toml"] }
+config = { version = "0.15", default-features = false, features = ["json", "toml"] }
 dirs = "6.0"
 shellexpand = "3.1"
 
@@ -46,7 +45,7 @@ tokio = { version = "1.50", features = ["full"] }
 # API/HTTP
 axum = "0.8"
 tower = "0.5"
-tower-http = { version = "0.6", features = ["cors", "trace"] }
+tower-http = { version = "0.6", features = ["trace"] }
 
 # MCP
 rmcp = { version = "2.2", features = ["server", "transport-io"] }
@@ -59,7 +58,7 @@ rmcp-macros = "=2.2.0"
 schemars = "1.2"
 
 # Internal crates
-rust-core = { path = "crates/rust-core" }
+{{project_name}}-core = { path = "crates/{{project_name}}-core" }
 byteowlz-tui-kit = { path = "crates/byteowlz-tui-kit" }
 
 # ============================================
@@ -131,7 +130,8 @@ cast_precision_loss = "allow"
 cast_possible_wrap = "allow"
 
 # Nursery lints that have too many false positives
-cognitive_complexity = "allow"      # Use clippy.toml threshold instead
+cognitive_complexity = "deny"       # Enforced via clippy.toml cognitive-complexity-threshold
+cyclomatic_complexity = "deny"      # Enforced via clippy.toml cyclomatic-complexity-threshold
 
 # CLI/TUI/API templates need stdout/stderr output
 print_stdout = "allow"              # CLIs/TUIs/APIs need to print to stdout

@@ -1,11 +1,11 @@
 //! Generate config.toml and config.schema.json to examples/ directory.
 //!
-//! Run with: cargo run -p rust-core --example `generate_config`
+//! Run with: cargo run -p {{project_name}}-core --example `generate_config`
 
 use std::path::PathBuf;
 
 use anyhow::Context as _;
-use rust_core::{APP_NAME, write_generated_files};
+use {{project_name}}_core::{APP_NAME, write_generated_files};
 
 /// Repository URL for schema $id.
 const REPO_URL: &str = "https://github.com/byteowlz/rust-workspace";

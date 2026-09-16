@@ -1,0 +1,35 @@
+{
+  "todos": [
+    {
+      "id": "7e38b982",
+      "content": "Rust: enable cognitive_complexity (deny) in rust-cli + rust-workspace Cargo.toml",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "788af2ba",
+      "content": "Rust: add cyclomatic-complexity-threshold to both clippy.toml",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "b2fc914a",
+      "content": "Python: add ruff mccabe/C901 complexity config to pyproject.toml",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "6b19627c",
+      "content": "Go: add .golangci.yaml enabling gocyclo/gocognit/cyclop",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "34b9baf3",
+      "content": "Wire lint jobs into all four release workflows (CI gate)",
+      "status": "completed",
+      "priority": "medium"
+    }
+  ],
+  "updated_at": "2026-09-16T12:04:38.550Z"
+}

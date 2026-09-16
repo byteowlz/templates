@@ -1,5 +1,5 @@
 [package]
-name = "rust-core"
+name = "{{project_name}}-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,19 +7,22 @@ repository.workspace = true
 readme.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Shared core library for the rust-workspace template"
+description = "CLI interface for the rust-workspace template"
 
 [lints]
 workspace = true
 
+[[bin]]
+name = "{{project_name}}-cli"
+path = "src/main.rs"
+
 [dependencies]
+{{project_name}}-core.workspace = true
 anyhow.workspace = true
-thiserror.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+env_logger.workspace = true
+log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-serde_yaml.workspace = true
 toml.workspace = true
-log.workspace = true
-config.workspace = true
-shellexpand.workspace = true
-schemars.workspace = true

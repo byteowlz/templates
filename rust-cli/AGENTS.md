@@ -1,170 +1,77 @@
 # AGENTS.md
 
-Guidance for coding agents working on this Rust CLI template.
+Guidance for coding agents working on this Rust CLI template. Kept short: it
+carries enforceable boundaries and workflows and points at machine-checked
+configuration instead of duplicating any inventory.
 
-## Domain and Architecture
+## Source of truth
 
-- Read `CONTEXT.md` before domain work and use its canonical terms consistently.
-- Update `CONTEXT.md` when domain language is resolved. Keep it a glossary only: no implementation details, specifications, or scratch notes.
-- Read `docs/adr/` before architectural changes.
-- Add an ADR only for a decision that is hard to reverse, surprising without context, and based on a real trade-off. Follow `docs/adr/README.md`.
+Static facts are machine-checked, not copied here:
 
-## Core Principles
+- Crate/dependency/lint settings → `Cargo.toml`; authoritative enumeration is
+  `cargo metadata --no-deps --format-version 1`.
+- Task commands → `just` (run `just` to list).
+- Issues → `trx` (see below).
+- Drift guard → `scripts/drift-check.sh` (verifies commands exist, the
+  JSON/TOML-only constraint, and that documented version claims match the real
+  manifest). Run it after touching the manifest or any doc claim.
 
-- **Never publish** artifacts to public registries without explicit user approval.
-- We favor clean refactors over backwards compatibility; update existing code in place (no `FooV2` suffixes).
-- Target Windows 11, Linux, and macOS 14+ with the same behavior; no legacy OS shims.
-- Keep file headers minimal—no author or timestamp banners.
+If `cargo metadata`, `just`, or `scripts/drift-check.sh` disagree with anything
+here, the command is right and this file is wrong.
 
-## Rust Workflow
+## Domain and architecture
 
-- Follow Clippy best practices: collapse trivial `if`s, inline `format!` arguments, and prefer method references over redundant closures.
-- When tests compare structures, assert on the full value instead of individual fields.
-- Run `cargo fmt` after code changes and `cargo test` for the touched crate. Invoke broader test or lint commands only if the user asks.
+- Read `CONTEXT.md` before domain work; keep it a glossary only.
+- Read `docs/adr/` before architectural changes; add an ADR only for hard-to-reverse
+  decisions with a real trade-off.
+- Never publish to a public registry without explicit user approval.
 
-## CLI Expectations
+## Strict lints
 
-- Prefer subcommands for verbs and keep outputs quiet/verbose via standard flags (`-q`, chainable `-v`, `--debug`, `--trace`).
-- Support machine-readable modes via `--json/--yaml` and honor NO_COLOR/FORCE_COLOR.
-- Offer `--dry-run`, `--yes/--force`, `--no-progress`, `--timeout`, and `--parallel` when operations warrant them.
-- Generate help quickly (`-h/--help`) and provide shell completions off the same Clap definitions.
+`[lints.clippy]` is maximum-strictness: `unsafe_code = "forbid"`;
+`unwrap_used`, `expect_used`, `panic`, `todo`, `unimplemented`, `dbg_macro`,
+`exit` = deny. Propagate errors with `?`, `anyhow::Result`, `.context("...")`.
+Output macros are allowed for a CLI.
 
-## Configuration & Storage
+## Workflow
 
-- Use XDG directories when available: config at `$XDG_CONFIG_HOME/<app>/config.toml`, data at `$XDG_DATA_HOME/<app>`, state at `$XDG_STATE_HOME/<app>` with sensible fallbacks (e.g., `~/.config`).
-- Expand `~` and environment variables in config paths.
-- Ship a commented example under `examples/`, create a default config on first run, and load overrides via the `config` crate.
+- CLI: subcommands for verbs; `{{project_name}}` global flags `-q`, `-v`,
+  `--debug`, `--trace`, `--no-color`, `--dry-run`, `--yes`, `--no-progress`.
+- Config structs: after editing `src/config.rs`, run `just generate-config` and
+  `just test` (the `validate_examples_are_up_to_date` test enforces it).
+- Before anything significant: `just check-all`.
 
-## House Rules
+## Application formats: JSON and TOML only
 
-- Do exactly what the user asks—no unsolicited files or docs.
-- Keep README updates concise, emoji-free, and only when requested.
-- Never commit secrets or sensitive paths; scrub logs before surfacing them.
+- Machine output and config are **JSON or TOML only** — `--json` plus TOML
+  config files. Never add a YAML output mode, a YAML example, or a YAML crate.
+- The `config` crate runs with `default-features = false` and only `json`/`toml`
+  features. `scripts/drift-check.sh` enforces the absence of `serde_yaml`.
 
-## Justfile Commands
+## Configuration & storage
 
-This project uses [just](https://github.com/casey/just) as a command runner. Run `just` to see available commands.
+- XDG paths with sensible fallbacks; expand `~` and env vars; ship a commented
+  example under `examples/`; write a default config on first run; override via
+  the `config` crate. Env prefix derives from `APP_NAME` — reference
+  `env_prefix()`, don't hardcode a literal.
 
-**Core commands:**
-```bash
-just              # Show available commands
-just install      # Install the binary
-just build        # Debug build
-just build-release # Release build
-just test         # Run tests
-just fmt          # Format code
-just clippy       # Run linter
-just check-all    # Format + lint + test
-```
+## Issue tracking (trx)
 
-**Development workflow:**
-```bash
-just check        # Fast compile check
-just fix          # Auto-fix clippy warnings
-just docs         # Generate documentation
-just update       # Update dependencies
-```
-
-Always run `just check-all` before committing significant changes.
-
-## Issue Tracking (bd/beads)
-
-Use `bd` for all issue tracking. Do NOT use markdown TODOs or external trackers.
+Use `trx` for all issue tracking — never markdown TODOs or `.beads`.
 
 ```bash
-bd ready --json                              # Find unblocked work
-bd create "Title" -t task -p 2 --json        # Create issue (types: bug/feature/task/epic/chore)
-bd update <id> --status in_progress --json   # Claim task
-bd close <id> --reason "Done" --json         # Complete work
+trx ready --json                                   # find unblocked work
+trx create "Title" -t task -p 2 --json             # create (bug/feature/task/epic/chore)
+trx update <id> --status in_progress --json        # claim
+trx close <id> -r "reason" --json                  # complete with reason
 ```
 
-Priorities: 0=critical, 1=high, 2=medium (default), 3=low, 4=backlog
+Priorities: 0=critical, 1=high, 2=medium (default), 3=low, 4=backlog.
+Issue state lives in `.trx/` (JSONL) — commit it with code changes.
 
-Always commit `.beads/issues.jsonl` with code changes.
+## House rules
 
-## Memory System (byt/mmry)
-
-Use `byt memory` to store and retrieve project knowledge. Memories auto-detect the current repo.
-
-**Adding memories:**
-```bash
-byt memory add "Important decision or learning"              # Auto-detects current repo
-byt memory add "Cross-repo architecture decision" --govnr    # Force govnr store
-byt memory add "Specific insight" -c "architecture" -i 8     # With category and importance
-```
-
-**Searching memories:**
-```bash
-byt memory search "query"           # Search current repo's memories
-byt memory search "query" --govnr   # Search cross-repo memories
-byt memory search "query" --all     # Search ALL projects
-```
-
-**When to add memories:**
-- Architecture decisions and their rationale
-- Non-obvious solutions to tricky problems
-- Integration patterns with other byteowlz repos
-- Performance findings or benchmarks
-- API contracts or breaking changes
-
-**When to search memories:**
-- Before starting work on a feature (check for prior decisions)
-- When encountering unfamiliar code patterns
-- When integrating with other repos (`byt memory search "query" --all`)
-
-## Releases & Distribution
-
-This project uses GitHub Actions for automated releases. See `.github/workflows/release.yml`.
-
-**Creating a release:**
-```bash
-# Tag-based (automatic trigger)
-git tag v1.0.0 && git push --tags
-
-# Manual trigger via CLI
-gh workflow run release.yml -f tag=v1.0.0
-```
-
-**What the workflow builds:**
-- Linux x86_64 (ubuntu-latest)
-- macOS x86_64 (cross-compiled from macos-14 ARM64)
-- macOS ARM64 (macos-14)
-- Windows x86_64 (if enabled)
-
-**Disabled by default (uncomment in workflow if needed):**
-- Linux ARM64: Requires `Cross.toml` with OpenSSL configuration
-- Windows: May have C runtime mismatch issues with some crates
-
-**Platform notes:**
-- `macos-13` runner is retired - always use `macos-14`
-- For protobuf projects: uncomment the protoc installation steps
-- For ML projects: uncomment `--features coreml` for Apple Silicon
-
-**Required secrets for package managers:**
-- `TAP_GITHUB_TOKEN` - PAT with repo access to byteowlz/homebrew-tap
-- `AUR_SSH_PRIVATE_KEY` - SSH key registered with AUR
-- `AUR_EMAIL` - Email for AUR commits
-
-Use `byt secrets setup <repo>` to configure secrets.
-
-**Installation methods (once published):**
-```bash
-# Homebrew (macOS/Linux)
-brew install byteowlz/tap/<binary-name>
-
-# AUR (Arch Linux)
-yay -S <binary-name>
-
-# Scoop (Windows)
-scoop bucket add byteowlz https://github.com/byteowlz/scoop-bucket
-scoop install <binary-name>
-```
-
----
-
-## Supply Chain Security
-
-- **Lock files**: `Cargo.lock` is committed and pins exact versions. Always commit lock file changes.
-- **Audit regularly**: Run `cargo audit` to check for known vulnerabilities in dependencies.
-- **Vet crates**: Consider `cargo-vet` to track which crates have been reviewed.
-- **Minimal dependencies**: Favour std library before adding third-party crates. Rust crates have no install scripts (lower risk than npm/PyPI), but transitive deps still matter.
+- Do exactly what the user asks — no unsolicited files.
+- Keep README updates concise and emoji-free.
+- Never commit secrets or sensitive paths; scrub logs.
+- `Cargo.lock` is committed; bump manifest + lock together.

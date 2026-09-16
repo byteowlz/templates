@@ -6,8 +6,12 @@ usage() {
   cat <<'USAGE'
 Usage: new-cli.sh <name> [--path DIR]
 
-Create a new workspace project by cloning the current template into DIR (defaults to <name>).
-Renames all crates from rust-* to <name>-* pattern.
+Create a new workspace project by cloning this template into DIR (defaults to <name>).
+
+Renames all crates from rust-* to <name>-*, rewrites their code identifiers
+({{project_name}}_core, {{project_name}}_cli, ... used in `use` statements), the environment prefix,
+the workspace name, and every project-identity reference (README, config
+paths, schema URLs, CI, justfile) from the template defaults to <name>.
 
 Options:
   -h, --help      Show this message
@@ -93,68 +97,81 @@ PY
 
 python3 - "$NAME" "$DEST" <<'PY'
 import pathlib
-import re
 import sys
 
 name = sys.argv[1]
 dest = pathlib.Path(sys.argv[2])
 
-# Replacement patterns
-old_workspace = "rust-workspace"
-old_prefix = "rust-"
-new_prefix = f"{name}-"
-old_env_prefix = "RUST_WORKSPACE"
-new_env_prefix = name.upper().replace("-", "_")
+underscore = name.replace('-', '_')
+upper = name.upper().replace('-', '_')
 
-def replace_content(path: pathlib.Path):
-    """Replace all occurrences in file content."""
+# Order matters:
+# 1. Replace the workspace name and env prefix first.
+# 2. Rewrite each crate's hyphenated name (`{{project_name}}-core` -> `<name>-core`) and
+#    its underscored code identifier (`{{project_name}}_core`) used in `use rust_*::...`
+#    imports — these aliases are what byt-era scaffolding missed and left
+#    uncompilable. Exact names only: `rust-magic-linter` (a lint preset) and
+#    `dtolnay/rust-toolchain` (a CI action) must stay untouched.
+# 3. Rewrite scaffolding placeholders that only `byt` understood.
+replacements = [
+    ("rust-workspace", name),
+    ("RUST_WORKSPACE", upper),
+    ("{{project_name}}-core", f"{name}-core"),
+    ("{{project_name}}-cli", f"{name}-cli"),
+    ("{{project_name}}-tui", f"{name}-tui"),
+    ("{{project_name}}-mcp", f"{name}-mcp"),
+    ("{{project_name}}-api", f"{name}-api"),
+    ("{{project_name}}_core", f"{underscore}_core"),
+    ("{{project_name}}_cli", f"{underscore}_cli"),
+    ("{{project_name}}_tui", f"{underscore}_tui"),
+    ("{{project_name}}_mcp", f"{underscore}_mcp"),
+    ("{{project_name}}_api", f"{underscore}_api"),
+    ("{{project_name}}", name),
+    ("your-binary-name", name),
+]
+
+def is_text(path: pathlib.Path) -> bool:
+    try:
+        path.read_bytes().decode('utf-8')
+        return True
+    except (UnicodeDecodeError, OSError):
+        return False
+
+def apply(path: pathlib.Path) -> None:
+    if not path.is_file() or not is_text(path):
+        return
+    # Do not rewrite the scaffolding/tooling scripts themselves: their embedded
+    # replacement tables and token lists must stay intact so they remain reusable
+    # after copying.
+    if path.name in ('new-cli.sh', 'new-cli.ps1', 'smoke-test.sh', 'drift-check.sh', 'privilege-boundary-test.sh'):
+        return
     text = path.read_text()
-    # Replace workspace name
-    text = text.replace(old_workspace, name)
-    # Replace crate prefixes (rust-core -> name-core, etc.)
-    text = text.replace(old_prefix, new_prefix)
-    # Replace environment variable prefix
-    text = text.replace(old_env_prefix, new_env_prefix)
-    path.write_text(text)
+    original = text
+    for old, new in replacements:
+        text = text.replace(old, new)
+    if text != original:
+        path.write_text(text)
 
-def rename_directories(base: pathlib.Path):
-    """Rename crate directories from rust-* to name-*."""
+def rename_directories(base: pathlib.Path) -> None:
     crates_dir = base / "crates"
     if not crates_dir.exists():
         return
-
     for crate_dir in sorted(crates_dir.iterdir(), reverse=True):
-        if crate_dir.is_dir() and crate_dir.name.startswith(old_prefix):
-            new_name = new_prefix + crate_dir.name[len(old_prefix):]
-            new_path = crate_dir.parent / new_name
-            crate_dir.rename(new_path)
+        if not crate_dir.is_dir():
+            continue
+        # New templates carry literal `{{project_name}}-*` crate dirs; older ones
+        # carried `rust-*`. Rename either to `<name>-*`.
+        if "{{project_name}}" in crate_dir.name:
+            new_name = crate_dir.name.replace("{{project_name}}", name)
+        elif crate_dir.name.startswith("rust-"):
+            new_name = f"{name}-" + crate_dir.name[len("rust-"):]
+        else:
+            continue
+        crate_dir.rename(crate_dir.parent / new_name)
 
-# Files to update
-files_to_update = [
-    dest / "Cargo.toml",
-    dest / "Cargo.lock",
-    dest / "README.md",
-    dest / "AGENTS.md",
-    dest / "TUI.md",
-    dest / "examples" / "config.toml",
-]
+for path in dest.rglob('*'):
+    apply(path)
 
-# Update crate files
-for crate_toml in dest.glob("crates/*/Cargo.toml"):
-    files_to_update.append(crate_toml)
-
-for main_rs in dest.glob("crates/*/src/main.rs"):
-    files_to_update.append(main_rs)
-
-for lib_rs in dest.glob("crates/*/src/lib.rs"):
-    files_to_update.append(lib_rs)
-
-# Process file content replacements
-for file in files_to_update:
-    if file.exists():
-        replace_content(file)
-
-# Rename crate directories
 rename_directories(dest)
 PY
 

@@ -6,6 +6,7 @@
 
 # Complexity thresholds - prevent sprawling functions
 cognitive-complexity-threshold = 15
+cyclomatic-complexity-threshold = 15
 type-complexity-threshold = 200
 too-many-lines-threshold = 100
 

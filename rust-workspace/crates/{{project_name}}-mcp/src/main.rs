@@ -18,7 +18,7 @@ use rmcp::{
 
 use rmcp::schemars;
 
-use rust_core::{AppConfig, AppPaths};
+use {{project_name}}_core::{AppConfig, AppPaths};
 
 fn main() -> anyhow::Result<()> {
     try_main()

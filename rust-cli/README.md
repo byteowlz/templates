@@ -29,7 +29,7 @@ This repository provides a batteries-included starting point for building cross-
 
 ## Features
 
-- `clap`-powered command interface with shared global flags (`-q`, `-v`, `--debug`, `--trace`, `--json`, `--yaml`, `--no-color`, `--dry-run`, `--yes`).
+- `clap`-powered command interface with shared global flags (`-q`, `-v`, `--debug`, `--trace`, `--json`, `--no-color`, `--dry-run`, `--yes`).
 - `config`-based configuration loader that creates `$XDG_CONFIG_HOME/rust-cli/config.toml` (or platform equivalents) on first run.
 - Environment overrides using the `RUST_CLI__*` prefix; e.g. `RUST_CLI__LOGGING__LEVEL=debug`.
 - Configurable data and state directories that honor XDG locations on Unix and the appropriate directories on Windows.
@@ -50,7 +50,7 @@ Key subcommands:
 - `config show|path|reset` – inspects the effective configuration.
 - `completions <shell>` – emits shell completions to stdout (`bash`, `zsh`, `fish`, `powershell`, `elvish`).
 
-Global flags apply to every subcommand, enabling quiet mode, stacked verbosity (`-vv`), trace logging, dry runs, JSON/YAML output, color control, progress suppression, and timeouts.
+Global flags apply to every subcommand, enabling quiet mode, stacked verbosity (`-vv`), trace logging, dry runs, JSON output, color control, progress suppression, and timeouts.
 
 ## Configuration
 

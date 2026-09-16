@@ -1,5 +1,5 @@
 [package]
-name = "rust-cli"
+name = "{{project_name}}-tui"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -7,23 +7,23 @@ repository.workspace = true
 readme.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "CLI interface for the rust-workspace template"
+description = "TUI interface for the rust-workspace template"
 
 [lints]
 workspace = true
 
 [[bin]]
-name = "rust-cli"
+name = "{{project_name}}-tui"
 path = "src/main.rs"
 
 [dependencies]
-rust-core.workspace = true
+{{project_name}}-core.workspace = true
+byteowlz-tui-kit.workspace = true
 anyhow.workspace = true
 clap.workspace = true
-clap_complete.workspace = true
+crossterm.workspace = true
 env_logger.workspace = true
 log.workspace = true
+ratatui.workspace = true
 serde.workspace = true
-serde_json.workspace = true
-serde_yaml.workspace = true
-toml.workspace = true
+tokio.workspace = true

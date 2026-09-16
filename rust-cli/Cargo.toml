@@ -12,14 +12,13 @@ categories = ["command-line-utilities"]
 anyhow = "1.0.100"
 clap = { version = "4.5.57", features = ["derive", "env"] }
 clap_complete = "4.5.65"
-config = { version = "0.15.19", features = ["toml"] }
+config = { version = "0.15.19", default-features = false, features = ["json", "toml"] }
 env_logger = "0.11.8"
 log = "0.4.29"
 schemars = "1.2"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 shellexpand = "3.1.1"
-serde_yaml = "0.9.34"
 toml = "0.9.11"
 
 [[example]]
@@ -94,8 +93,9 @@ cast_sign_loss = "allow"
 cast_precision_loss = "allow"
 cast_possible_wrap = "allow"
 
-# Nursery lints that have too many false positives
-cognitive_complexity = "allow"      # Use clippy.toml threshold instead
+# Complexity guardrails - deny lets the clippy.toml threshold actually fire
+cognitive_complexity = "deny"       # Enforced via clippy.toml cognitive-complexity-threshold
+cyclomatic_complexity = "deny"      # Enforced via clippy.toml cyclomatic-complexity-threshold
 
 # CLI templates need stdout/stderr output
 print_stdout = "allow"              # CLIs need to print to stdout

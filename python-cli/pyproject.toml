@@ -27,3 +27,11 @@ dev = [
   "mypy>=1.10.0",
   "types-PyYAML>=6.0.12",
 ]
+
+[tool.ruff.lint]
+# Ruff's default set (E4/E7/E9/F) plus cyclomatic complexity (C90/mccabe)
+select = ["E4", "E7", "E9", "F", "C90"]
+
+[tool.ruff.lint.mccabe]
+# Cyclomatic complexity guardrail - fail when a function exceeds this
+max-complexity = 10
