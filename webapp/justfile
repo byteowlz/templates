@@ -1,0 +1,110 @@
+# {{project_name}} justfile — byteowlz focused webapp
+
+PORT := env_var_or_default("PORT", "8790")
+
+# Default recipe - show help
+default:
+    @just --list
+
+# === Development ===
+
+# Install dependencies (bun)
+install:
+    bun install
+
+# Dev server (registers in the service registry; unregisters on Ctrl-C)
+dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export PORT="{{PORT}}"
+    scripts/register.sh || true
+    trap 'scripts/unregister.sh || true' EXIT
+    bunx vite
+
+# Production build (typecheck + vite build → dist/)
+build:
+    bun run build
+
+# === Quality ===
+
+# Typecheck
+typecheck:
+    bun run typecheck
+
+# Lint (oxlint)
+lint:
+    bun run lint
+
+# All checks
+check:
+    just typecheck
+    just lint
+    just build
+
+# === Serving ===
+
+# Build + serve dist/ (registered; unregisters on exit)
+serve:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export PORT="{{PORT}}"
+    bun run build
+    scripts/register.sh || true
+    trap 'scripts/unregister.sh || true' EXIT
+    bunx vite preview
+
+# Register this webapp in the service registry (http://100.64.0.12:8774)
+register:
+    scripts/register.sh
+
+# Unregister (call on shutdown)
+unregister:
+    scripts/unregister.sh
+
+# === Omarchy theme (optional) ===
+
+# Apply the machine's active omarchy theme (no-op without omarchy; `watch` follows live)
+omarchy *ARGS:
+    node scripts/omarchy-theme.mjs {{ARGS}}
+
+# === Oqto app (optional, ADR-0038) ===
+
+# Build the self-contained sandboxed-web bundle (oqto-app.toml entry target)
+oqto-bundle:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    bun run build
+    rm -rf bundle
+    cp -R dist bundle
+    echo "bundle/ ready — oqto-app.toml entry target"
+
+# Check oqto manifest + bundle self-containment (real external loads, not inert strings)
+oqto-check: oqto-bundle
+    #!/usr/bin/env bash
+    set -euo pipefail
+    grep -q 'schema = "oqto-app/v0"' oqto-app.toml || { echo "FAIL: manifest schema missing"; exit 1; }
+    hits=""
+    hits+="$(grep -rEno 'fetch\([^;]{0,80}"https?://[^"]+' bundle --include='*.js' || true)"
+    hits+="$(grep -rEno '<[a-zA-Z]+[^>]+(src|href)="https?://[^"]*"' bundle --include='*.html' || true)"
+    hits+="$(grep -rEno 'url\("?https?://[^)]*)|@import +https?://[^;]*;' bundle --include='*.css' || true)"
+    hits+="$(grep -rEno 'new WebSocket\("(wss?|https?)://[^"]+' bundle --include='*.js' || true)"
+    if [ -n "$hits" ]; then
+      echo "FAIL: external loads in bundle (bundles must be self-contained):"
+      echo "$hits" | sort -u | head -20
+      exit 1
+    fi
+    echo "oqto: manifest ok, bundle self-contained"
+
+# === Utilities ===
+
+clean:
+    rm -rf dist bundle node_modules
+
+# Tag a release
+release-tag VERSION:
+    git tag v{{VERSION}}
+    git push --tags
+
+# Set up GitHub secrets for automated releases (requires byt)
+setup-secrets:
+    byt secrets setup {{project_name}}

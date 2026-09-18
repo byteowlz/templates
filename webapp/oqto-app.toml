@@ -1,0 +1,27 @@
+# Oqto app manifest — TOML, never YAML (schema "oqto-app/v0", provisional pin).
+#
+# This repo is STRUCTURED FOR DISCOVERY per ADR-0038. The oqto runtime side
+# (filesystem resolver, Installation/binding records, capability grants) is
+# designed but not implemented yet (oqto-171p): the app runs standalone today
+# and `just oqto-bundle` produces the self-contained sandboxed-web bundle this
+# manifest points at. See docs/oqto.md before extending capabilities.
+
+schema = "oqto-app/v0"
+
+id = "{{project_name}}"
+version = "0.1.0"
+title = { en = "{{project_name}}" }
+description = "One line: what this tool does."
+
+presentations = ["sandboxed-web"]
+
+[presentation.sandboxed-web]
+entry = "bundle/index.html"   # self-contained; CSP: packaged bundle only, no CDN, no network
+
+# Capabilities used = capabilities declared. The seed app uses none; add
+# ("kv", "theme", "notifications", "files", "user") only together with code
+# that touches host.* (see docs/oqto.md).
+requested_capabilities = []
+
+bindings = ["work-directory"]
+default_binding = "work-directory"

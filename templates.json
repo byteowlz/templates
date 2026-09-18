@@ -24,6 +24,12 @@
       "path": "go-cli",
       "languages": ["go"],
       "features": ["cobra", "viper", "xdg", "release-workflow"]
+    },
+    "webapp": {
+      "description": "Focused webapp (Vite + React + TS + Tailwind v4, byteowlz design-system tokens; optional omarchy theme + oqto app)",
+      "path": "webapp",
+      "languages": ["typescript"],
+      "features": ["vite", "react", "tailwindcss", "design-system", "omarchy-theme", "oqto-app", "service-registry", "release-workflow"]
     }
   }
 }

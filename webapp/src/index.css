@@ -1,0 +1,222 @@
+/* byteowlz design system — token layer (Tailwind CSS v4).
+ *
+ * Architecture (see docs/design-system.md and ~/byteowlz/design-system):
+ *   slots (--base00..--base17, base24) → roles → framework vocabulary.
+ * Slot var names match the design-system engine exactly (`--base0B`, not
+ * `--base0b` — CSS custom properties are case-sensitive), so vendoring the
+ * engine later and calling applyScheme() overrides every slot cleanly.
+ *
+ * The committed defaults are the house scheme `oqto-dark`; `.light` carries
+ * `oqto-light`. `src/theme/omarchy.generated.css` may override the slot vars
+ * at runtime (see docs/omarchy.md) — everything downstream follows because
+ * roles and vocabulary reference slots, never literals.
+ *
+ * Rules for components:
+ *   - Use role/utility tokens (bg-background, text-muted-foreground, ...).
+ *     Never hardcode hex/oklch literals in components.
+ *   - Radius only via --radius-sm/md/lg/xl. The dial is --radius; sharp-at-0
+ *     is the house identity (R1: proportional tiers, all 0 when dial = 0).
+ */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+@custom-variant light (&:is(.light *));
+
+@theme inline {
+	/* R1 radius — proportional to the single dial. */
+	--radius-sm: calc(var(--radius) * 0.5);
+	--radius-md: calc(var(--radius) * 0.75);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) * 1.25);
+
+	/* Abstract roles (portable surface, closed set of 16). */
+	--color-background: var(--base00);
+	--color-surface: var(--base01);
+	--color-surface-sunken: var(--base11);
+	--color-foreground: var(--base05);
+	--color-muted-foreground: var(--base04);
+	--color-primary: var(--base0B);
+	--color-secondary: var(--base02);
+	--color-muted: var(--base02);
+	--color-accent: var(--base02);
+	--color-success: var(--base0B);
+	--color-warning: var(--base0A);
+	--color-danger: var(--base08);
+	--color-info: var(--base0D);
+	--color-border: var(--base01);
+	--color-ring: var(--base0B);
+	--color-input: var(--base01);
+
+	/* shadcn concrete surface (framework vocabulary, non-portable). */
+	--color-card: var(--base01);
+	--color-card-foreground: var(--base05);
+	--color-popover: var(--base01);
+	--color-popover-foreground: var(--base05);
+	--color-primary-foreground: var(--base00);
+	--color-secondary-foreground: var(--base06);
+	--color-accent-foreground: var(--base06);
+	--color-destructive: var(--base08);
+	--color-destructive-foreground: var(--base06);
+	--color-success-foreground: var(--base00);
+	--color-warning-foreground: var(--base00);
+	--color-info-foreground: var(--base00);
+	--color-danger-foreground: var(--base00);
+	--color-sidebar: var(--base11);
+	--color-sidebar-foreground: var(--base06);
+	--color-sidebar-primary: var(--base0B);
+	--color-sidebar-primary-foreground: var(--base11);
+	--color-sidebar-accent: var(--base00);
+	--color-sidebar-accent-foreground: var(--base06);
+	--color-sidebar-border: var(--base01);
+	--color-sidebar-ring: var(--base0B);
+	--color-chart-1: var(--base0D);
+	--color-chart-2: var(--base0B);
+	--color-chart-3: var(--base0E);
+	--color-chart-4: var(--base09);
+	--color-chart-5: var(--base0C);
+}
+
+/* House scheme: oqto-dark (dark-first). Radius dial at 0 = sharp (house
+ * identity); move the dial per-tool — that is identity, not mechanism. */
+:root {
+	color-scheme: dark;
+
+	--radius: 0px;
+
+	/* base24 slots — oqto-dark */
+	--base00: #222624;
+	--base01: #2d312f;
+	--base02: #3a3f41;
+	--base03: #6b7974;
+	--base04: #b2b9b5;
+	--base05: oklch(0.8008 0.0079 228.8806);
+	--base06: #f2f5f3;
+	--base07: #f5f5f5;
+	--base08: #b94a48;
+	--base09: #c98a5a;
+	--base0A: #d4c275;
+	--base0B: #3ba77c;
+	--base0C: #3ba7a0;
+	--base0D: #5b8fc9;
+	--base0E: #a78bd0;
+	--base0F: #8a6f5a;
+	--base10: #161c1a;
+	--base11: #0f1412;
+	--base12: #d96b69;
+	--base13: #e6d488;
+	--base14: #5bc79a;
+	--base15: #5bc7c0;
+	--base16: #7bace0;
+	--base17: #c0a3e0;
+
+	/* Roles ← slots (keep in sync with @theme inline). */
+	--background: var(--base00);
+	--surface: var(--base01);
+	--surface-sunken: var(--base11);
+	--foreground: var(--base05);
+	--muted-foreground: var(--base04);
+	--primary: var(--base0B);
+	--secondary: var(--base02);
+	--muted: var(--base02);
+	--accent: var(--base02);
+	--success: var(--base0B);
+	--warning: var(--base0A);
+	--danger: var(--base08);
+	--info: var(--base0D);
+	--border: var(--base01);
+	--ring: var(--base0B);
+	--input: var(--base01);
+	--card: var(--base01);
+	--popover: var(--base01);
+	--destructive: var(--base08);
+
+	/* Identity (per-tool look): monospace-first, like byteowlz services. */
+	--font-sans: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+	--font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* House light scheme: oqto-light. Applied via `.light` on <html> (or let the
+ * omarchy adapter drive slots directly — see docs/omarchy.md). */
+.light {
+	color-scheme: light;
+
+	--base00: oklch(0.97 0.005 165);
+	--base01: oklch(0.928 0.006 165);
+	--base02: oklch(0.895 0.012 165);
+	--base03: oklch(0.62 0.015 165);
+	--base04: oklch(0.5 0.012 165);
+	--base05: oklch(0.3 0.01 165);
+	--base06: oklch(0.205 0.008 165);
+	--base07: oklch(0.15 0.005 165);
+	--base08: oklch(0.52 0.15 24);
+	--base09: oklch(0.58 0.11 57);
+	--base0A: oklch(0.56 0.11 96);
+	--base0B: oklch(0.47 0.115 163);
+	--base0C: oklch(0.52 0.085 189);
+	--base0D: oklch(0.52 0.115 252);
+	--base0E: oklch(0.55 0.115 302);
+	--base0F: oklch(0.48 0.05 59);
+	--base10: oklch(0.94 0.006 165);
+	--base11: oklch(0.915 0.009 165);
+	--base12: oklch(0.6 0.15 24);
+	--base13: oklch(0.68 0.11 96);
+	--base14: oklch(0.58 0.12 163);
+	--base15: oklch(0.58 0.09 189);
+	--base16: oklch(0.58 0.11 252);
+	--base17: oklch(0.62 0.11 302);
+}
+
+@layer base {
+	* {
+		box-sizing: border-box;
+		border-color: var(--border);
+		outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
+	}
+
+	html {
+		-webkit-text-size-adjust: 100%;
+	}
+
+	body {
+		margin: 0;
+		min-height: 100dvh;
+		background: var(--background);
+		color: var(--foreground);
+		font: 14px/1.5 var(--font-sans);
+		-webkit-font-smoothing: antialiased;
+	}
+
+	::selection {
+		background: color-mix(in srgb, var(--primary) 35%, transparent);
+	}
+
+	* {
+		scrollbar-color: var(--border) transparent;
+		scrollbar-width: thin;
+	}
+
+	button,
+	input,
+	select,
+	textarea {
+		font: inherit;
+		color: inherit;
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--ring);
+		outline-offset: 2px;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+		}
+	}
+}

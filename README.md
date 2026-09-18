@@ -10,6 +10,7 @@ Project templates for use with `byt new`.
 | `rust-workspace` | Rust workspace with multiple crates |
 | `python-cli` | Python CLI with uv, typer, XDG paths |
 | `go-cli` | Go CLI with cobra, viper, XDG paths |
+| `webapp` | Focused webapp: Vite + React + TS + Tailwind v4, byteowlz design-system tokens, optional omarchy theme follow + oqto app manifest |
 
 ## Usage
 
