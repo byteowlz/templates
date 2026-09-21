@@ -7,7 +7,7 @@ repository.workspace = true
 readme.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "CLI interface for the rust-workspace template"
+description = "CLI interface for {{project_name}}"
 
 [lints]
 workspace = true
