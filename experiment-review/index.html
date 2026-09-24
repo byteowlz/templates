@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>{{project_name}} / review</title>
+    <style>
+      /* Byteowlz roles, radius 0. Recolor the roles; keep components semantic. */
+      :root {
+        --background: #10191d;
+        --surface: #19262b;
+        --surface-sunken: #0b1215;
+        --foreground: #e9f1ed;
+        --muted-foreground: #acbcb9;
+        --primary: #a9dfb2;
+        --secondary: #273b40;
+        --accent: #273b40;
+        --warning: #f4c97e;
+        --border: #35474b;
+        --ring: #a9dfb2;
+        --radius: 0px;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: var(--foreground);
+        background: var(--background);
+      }
+      * {
+        box-sizing: border-box;
+        border-radius: var(--radius);
+      }
+      body {
+        margin: 0;
+      }
+      ::selection {
+        background: var(--primary);
+        color: var(--background);
+      }
+      :focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 3px;
+      }
+      a {
+        color: var(--primary);
+        text-underline-offset: 3px;
+      }
+      a:hover {
+        color: var(--foreground);
+      }
+      header,
+      main,
+      footer {
+        max-width: 1120px;
+        margin: auto;
+        padding-inline: clamp(16px, 4vw, 48px);
+      }
+      header {
+        padding-block: 18px;
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+      }
+      .brand {
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        font-size: 17px;
+        color: var(--foreground);
+        text-decoration: none;
+      }
+      nav {
+        display: flex;
+        gap: clamp(9px, 2vw, 22px);
+        flex-wrap: wrap;
+      }
+      nav a {
+        white-space: nowrap;
+      }
+      main {
+        padding-top: clamp(30px, 5vw, 64px);
+        padding-bottom: 80px;
+      }
+      h1 {
+        font-size: clamp(2.2rem, 5.6vw, 4.5rem);
+        letter-spacing: -0.035em;
+        line-height: 1.03;
+        margin: 0 0 18px;
+        max-width: 800px;
+      }
+      h2 {
+        font-size: clamp(1.45rem, 2.6vw, 2rem);
+        line-height: 1.15;
+        letter-spacing: -0.025em;
+        margin: 0 0 10px;
+      }
+      h3 {
+        font-size: 1.13rem;
+        margin: 0 0 6px;
+      }
+      p {
+        line-height: 1.55;
+        margin: 0 0 12px;
+      }
+      .lead {
+        max-width: 70ch;
+        color: var(--muted-foreground);
+        font-size: clamp(1rem, 1.5vw, 1.15rem);
+      }
+      .notice {
+        color: var(--warning);
+        border: 1px solid var(--warning);
+        padding: 12px 15px;
+        margin: 28px 0 36px;
+        line-height: 1.5;
+        max-width: 76ch;
+      }
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 16px;
+        border-top: 1px solid var(--border);
+        padding-top: 24px;
+        margin-top: 52px;
+        margin-bottom: 22px;
+      }
+      .section-head p {
+        color: var(--muted-foreground);
+        max-width: 64ch;
+      }
+      .toggle {
+        background: var(--secondary);
+        color: var(--foreground);
+        border: 1px solid var(--border);
+        padding: 10px 13px;
+        min-height: 44px;
+        white-space: nowrap;
+        font: inherit;
+        cursor: pointer;
+      }
+      .toggle:hover {
+        background: var(--accent);
+        border-color: var(--primary);
+      }
+      .experiment {
+        border-top: 2px solid var(--primary);
+        background: var(--surface);
+        margin-block: 22px;
+        padding: clamp(16px, 3vw, 28px);
+      }
+      .experiment-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: start;
+        margin-bottom: 20px;
+      }
+      .experiment-head p {
+        color: var(--muted-foreground);
+        max-width: 70ch;
+      }
+      .status {
+        font-size: 12px;
+        padding: 6px 9px;
+        border: 1px solid var(--border);
+        white-space: nowrap;
+        color: var(--primary);
+      }
+      .compare {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .cell {
+        background: var(--surface-sunken);
+        border: 1px solid var(--border);
+        min-width: 0;
+      }
+      .cell-label {
+        padding: 9px 11px;
+        font-size: 12px;
+        font-weight: 700;
+        border-bottom: 1px solid var(--border);
+      }
+      .stage {
+        height: clamp(192px, 29vw, 300px);
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+      }
+      .pixel {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        object-fit: contain;
+        width: 128px;
+        height: 192px;
+        max-width: 100%;
+      }
+      .native .pixel {
+        width: 32px;
+        height: 48px;
+      }
+      .caption {
+        color: var(--muted-foreground);
+        font-size: 12px;
+        padding: 9px 11px;
+      }
+      .evidence {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+        gap: 18px;
+        margin-top: 18px;
+      }
+      .evidence figure {
+        margin: 0;
+        background: var(--surface-sunken);
+        padding: 12px;
+      }
+      .evidence img {
+        width: 100%;
+        height: 160px;
+        object-fit: contain;
+        display: block;
+        image-rendering: pixelated;
+      }
+      .evidence .source {
+        image-rendering: auto;
+      }
+      figcaption {
+        color: var(--muted-foreground);
+        font-size: 12px;
+        line-height: 1.45;
+        margin-top: 8px;
+      }
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 18px;
+        margin-top: 18px;
+        font-size: 13px;
+      }
+      .meta div {
+        border-top: 1px solid var(--border);
+        padding-top: 9px;
+      }
+      .meta strong {
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted-foreground);
+        margin-bottom: 5px;
+      }
+      .meta span {
+        line-height: 1.5;
+      }
+      .result {
+        margin-top: 18px;
+        padding: 14px 16px;
+        background: var(--surface-sunken);
+        line-height: 1.5;
+      }
+      .result b {
+        color: var(--primary);
+      }
+      .sheet-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .sheet {
+        margin: 0;
+        background: var(--surface);
+        padding: 12px;
+        min-width: 0;
+      }
+      .sheet img {
+        display: block;
+        width: 100%;
+        height: auto;
+        max-height: 310px;
+        object-fit: contain;
+        image-rendering: pixelated;
+        background: var(--surface-sunken);
+      }
+      .sheet figcaption {
+        font-size: 13px;
+      }
+      .sheet strong {
+        color: var(--foreground);
+        display: block;
+        margin-bottom: 3px;
+      }
+      footer {
+        padding-block: 25px 40px;
+        color: var(--muted-foreground);
+        border-top: 1px solid var(--border);
+        font-size: 13px;
+      }
+      @media (max-width: 700px) {
+        header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+        .section-head {
+          display: block;
+        }
+        .section-head .toggle {
+          margin-top: 8px;
+        }
+        .experiment-head {
+          display: block;
+        }
+        .status {
+          display: inline-block;
+          margin-bottom: 12px;
+        }
+        .stage {
+          height: 205px;
+        }
+        .pixel {
+          width: 128px;
+          height: 192px;
+        }
+        .evidence {
+          gap: 10px;
+        }
+        .evidence img {
+          height: 125px;
+        }
+        .meta,
+        .sheet-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 360px) {
+        .pixel {
+          width: 112px;
+          height: 168px;
+        }
+        .stage {
+          height: 180px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="#top">{{project_name}} / review</a>
+      <nav aria-label="Sections">
+        <a href="#compare">Compare</a><a href="#evidence">Evidence</a
+        ><a href="#notes">Notes</a>
+      </nav>
+    </header>
+    <main id="top">
+      <h1>What changed in the result?</h1>
+      <p class="lead">
+        A focused, private review surface for one experiment at a time. Show the
+        actual artifact first, then explain the method, measurements and limits.
+        This sample exhibit is synthetic; replace it with your own curated
+        evidence.
+      </p>
+      <p class="notice">
+        <strong>Rights / use:</strong> Sample media is locally authored for this
+        template. Replace this banner with the rights and training status of
+        your real sources. Never infer reuse rights from the ability to view a
+        file.
+      </p>
+      <section id="compare" aria-labelledby="compare-title">
+        <div class="section-head">
+          <div>
+            <h2 id="compare-title">Side-by-side comparison</h2>
+            <p>
+              Two loops from the same synthetic input. Both are 32×48 GIFs. Keep
+              comparisons aligned, playable and nearest-neighbor at integer
+              scale.
+            </p>
+          </div>
+          <button class="toggle" id="scale" type="button" aria-pressed="false">
+            Scale: nearest ×4
+          </button>
+        </div>
+        <article class="experiment">
+          <div class="experiment-head">
+            <div>
+              <h3>Pass A / geometry preserved</h3>
+              <p>
+                One deliberate example: a little figure raises an arm. Present
+                the observed input and the before/after methods without claiming
+                a winner from a single image.
+              </p>
+            </div>
+            <span class="status">Sample / replace</span>
+          </div>
+          <div class="compare">
+            <div class="cell">
+              <div class="cell-label">Method A / controlled</div>
+              <div class="stage">
+                <img
+                  class="pixel"
+                  src="/media/method-a.gif"
+                  alt="Synthetic pixel figure raising an arm, method A"
+                  loading="eager"
+                />
+              </div>
+              <div class="caption">32×48 · synthetic animation</div>
+            </div>
+            <div class="cell">
+              <div class="cell-label">Method B / baseline</div>
+              <div class="stage">
+                <img
+                  class="pixel"
+                  src="/media/method-b.gif"
+                  alt="Synthetic pixel figure raising an arm, baseline B"
+                  loading="eager"
+                />
+              </div>
+              <div class="caption">Same timing and canvas</div>
+            </div>
+          </div>
+          <div class="evidence" id="evidence">
+            <figure>
+              <img
+                class="source"
+                src="/media/source.svg"
+                alt="Synthetic pixel figure input"
+                loading="lazy"
+              />
+              <figcaption>
+                Source / locally authored synthetic input, not a licensed
+                third-party asset.
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src="/media/diff.svg"
+                alt="Synthetic before and after lattice cells"
+                loading="lazy"
+              />
+              <figcaption>
+                Evidence / schematic cell comparison. Replace with a real
+                native-scale view.
+              </figcaption>
+            </figure>
+          </div>
+          <div class="meta">
+            <div>
+              <strong>Source</strong
+              ><span
+                >Synthetic sprite generated in this template. Replace with a
+                documented source and provenance.</span
+              >
+            </div>
+            <div>
+              <strong>Method</strong
+              ><span
+                >Sample two-frame loops. State real sampling and transformation
+                rules here.</span
+              >
+            </div>
+            <div>
+              <strong>Status / metrics</strong
+              ><span
+                >Demonstration only; no benchmark numbers are claimed. Add
+                denominators and baseline definitions with real results.</span
+              >
+            </div>
+            <div>
+              <strong>Rights / artifacts</strong
+              ><span
+                >Template-owned demo; two GIFs, source view, and comparison
+                diagram. Curate each served path in server.mjs.</span
+              >
+            </div>
+          </div>
+          <p class="result">
+            <b>Conclusion.</b> Replace this example with a measured finding and
+            a named caveat. Do not conflate a clean-looking crop with a general
+            result.
+          </p>
+        </article>
+      </section>
+      <section id="notes" aria-labelledby="notes-title">
+        <div class="section-head">
+          <div>
+            <h2 id="notes-title">Working notes</h2>
+            <p>
+              Use this quieter section for one explanatory sheet and links to
+              the underlying research. Do not turn the review into a directory
+              dump.
+            </p>
+          </div>
+        </div>
+        <div class="sheet-grid">
+          <figure class="sheet">
+            <a href="/media/repair.svg"
+              ><img
+                src="/media/repair.svg"
+                alt="Synthetic before and after color repair diagram"
+                loading="lazy"
+            /></a>
+            <figcaption>
+              <strong>Another view / before and after</strong>A locally authored
+              sample image to show how a secondary proof sits below the primary
+              moving comparison.
+            </figcaption>
+          </figure>
+          <div class="sheet">
+            <h3>Reading the evidence</h3>
+            <p class="lead">
+              Separate observed differences from conclusions. Record unresolved
+              failures, source rights and status alongside every real exhibit.
+            </p>
+            <p class="result">
+              <b>Next step.</b> Replace sample images and copy, then update the
+              exact media allowlist and its access tests.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer>
+      {{project_name}} · private experiment review, not an asset archive.
+      Replace every synthetic example before publishing a real study.
+    </footer>
+    <script>
+      const scale = document.getElementById("scale");
+      scale.addEventListener("click", () => {
+        const native = document.body.classList.toggle("native");
+        scale.setAttribute("aria-pressed", String(native));
+        scale.textContent = native ? "Scale: native 1×" : "Scale: nearest ×4";
+      });
+    </script>
+  </body>
+</html>

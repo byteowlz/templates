@@ -29,7 +29,28 @@
       "description": "Focused webapp (Vite + React + TS + Tailwind v4, byteowlz design-system tokens; optional omarchy theme + oqto app)",
       "path": "webapp",
       "languages": ["typescript"],
-      "features": ["vite", "react", "tailwindcss", "design-system", "omarchy-theme", "oqto-app", "service-registry", "release-workflow"]
+      "features": [
+        "vite",
+        "react",
+        "tailwindcss",
+        "design-system",
+        "omarchy-theme",
+        "oqto-app",
+        "service-registry",
+        "release-workflow"
+      ]
+    },
+    "experiment-review": {
+      "description": "Private, mobile-first curated experiment review gallery with side-by-side motion and explicit rights/metrics",
+      "path": "experiment-review",
+      "languages": ["javascript"],
+      "features": [
+        "read-only-server",
+        "media-allowlist",
+        "design-system",
+        "mobile-review",
+        "synthetic-demo"
+      ]
     }
   }
 }

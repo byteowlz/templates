@@ -4,13 +4,14 @@ Project templates for use with `byt new`.
 
 ## Available Templates
 
-| Template | Description |
-|----------|-------------|
-| `rust-cli` | Rust CLI application with clap, config, XDG paths |
-| `rust-workspace` | Rust workspace with multiple crates |
-| `python-cli` | Python CLI with uv, typer, XDG paths |
-| `go-cli` | Go CLI with cobra, viper, XDG paths |
-| `webapp` | Focused webapp: Vite + React + TS + Tailwind v4, byteowlz design-system tokens, optional omarchy theme follow + oqto app manifest |
+| Template            | Description                                                                                                                       |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `rust-cli`          | Rust CLI application with clap, config, XDG paths                                                                                 |
+| `rust-workspace`    | Rust workspace with multiple crates                                                                                               |
+| `python-cli`        | Python CLI with uv, typer, XDG paths                                                                                              |
+| `go-cli`            | Go CLI with cobra, viper, XDG paths                                                                                               |
+| `webapp`            | Focused webapp: Vite + React + TS + Tailwind v4, byteowlz design-system tokens, optional omarchy theme follow + oqto app manifest |
+| `experiment-review` | Private, mobile-first curated comparison gallery (pxltr visual grammar, synthetic samples only)                                   |
 
 ## Usage
 
@@ -20,6 +21,9 @@ byt new myproject --template rust-cli
 
 # Create and also init GitHub repo
 byt new myproject --template rust-cli --github
+
+# On byt versions without the named experiment-review template:
+byt new myreview --from-git byteowlz/templates --subdir experiment-review
 ```
 
 ## Template Structure

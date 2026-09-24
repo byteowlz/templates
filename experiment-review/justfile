@@ -1,0 +1,14 @@
+# Private review-gallery template. Zero runtime dependencies beyond Node 18+.
+set shell := ["bash", "-uc"]
+
+# Serve localhost by default. Set REVIEW_TAILNET_IP for tailnet access.
+serve:
+    node server.mjs
+
+# Verify the allowlist and GIF availability.
+test:
+    node --test tests/*.test.mjs
+
+# Regenerate locally authored synthetic sample media (ImageMagick required).
+demo:
+    node scripts/make-demo.mjs
