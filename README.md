@@ -37,6 +37,20 @@ Each template includes:
 - `.github/workflows/release.yml` - Automated releases
 - Language-specific project files
 
+## Project Icon
+
+Projects with a visual identity add a tool-facing mark at a fixed path (see the
+byteowlz repository standard in the wiki):
+
+```text
+icon/icon_on_dark.svg    # light-coloured mark, for dark backgrounds
+icon/icon_on_light.svg   # dark-coloured mark, for light backgrounds
+```
+
+Square, transparent, no text, legible at 16 px. Run `just icon` to render the
+256x256 PNGs next to them, and commit all four files. Templates do not ship a
+placeholder icon: without `icon/`, tools show nothing.
+
 ## Customization
 
 Fork this repo and set your custom template repo in `~/.config/byt/config.toml`:

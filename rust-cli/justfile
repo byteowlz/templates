@@ -132,3 +132,24 @@ setup-secrets:
 completions shell="bash":
     @mkdir -p completions
     cargo run -- completions {{shell}} > completions/{{project_name}}.{{shell}}
+
+# === Assets ===
+
+# Render icon/icon_on_{dark,light}.png (256x256) from the SVG sources (byteowlz project icon standard)
+icon:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for variant in on_dark on_light; do
+        svg="icon/icon_${variant}.svg"
+        png="icon/icon_${variant}.png"
+        if [ ! -f "$svg" ]; then
+            echo "skip: $svg not found"
+            continue
+        fi
+        if command -v rsvg-convert >/dev/null; then
+            rsvg-convert -w 256 -h 256 -a "$svg" -o "$png"
+        else
+            magick -background none -density 384 "$svg" -resize 256x256 -gravity center -extent 256x256 "$png"
+        fi
+        echo "rendered $png"
+    done
