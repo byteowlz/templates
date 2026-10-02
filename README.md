@@ -8,6 +8,7 @@ Project templates for use with `byt new`.
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `rust-cli`          | Rust CLI application with clap, config, XDG paths                                                                                 |
 | `rust-workspace`    | Rust workspace with multiple crates                                                                                               |
+| `rust-gpui`         | Native GPUI desktop app; byteowlz design system built in (one `gpui-kit` dep, `scheme -> closed role layer -> gpui theme set`)     |
 | `python-cli`        | Python CLI with uv, typer, XDG paths                                                                                              |
 | `go-cli`            | Go CLI with cobra, viper, XDG paths                                                                                               |
 | `webapp`            | Focused webapp: Vite + React + TS + Tailwind v4, byteowlz design-system tokens, optional omarchy theme follow + oqto app manifest |

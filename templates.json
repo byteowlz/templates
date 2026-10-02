@@ -13,6 +13,19 @@
       "languages": ["rust"],
       "features": ["clap", "config", "xdg", "release-workflow", "workspace"]
     },
+    "rust-gpui": {
+      "description": "Native GPUI desktop app with the byteowlz design system built in (one gpui-kit dep; scheme -> closed role layer -> gpui theme set)",
+      "path": "rust-gpui",
+      "languages": ["rust"],
+      "features": [
+        "gpui-kit",
+        "design-system",
+        "config",
+        "xdg",
+        "theme-toggle",
+        "release-workflow"
+      ]
+    },
     "python-cli": {
       "description": "Python CLI application",
       "path": "python-cli",

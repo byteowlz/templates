@@ -1,0 +1,24 @@
+[package]
+name = "{{project_name}}"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Native gpui desktop app built on the byteowlz design system"
+
+[dependencies]
+{{project_name}}-design = { path = "../{{project_name}}-design" }
+gpui-kit.workspace = true
+config.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+log.workspace = true
+env_logger.workspace = true
+
+# Optional UI integration tests: add `gpui-kit = { workspace = true,
+# features = ["test-support"] }` under [dev-dependencies] and use
+# `#[gpui_kit::test]` with `TestAppContext`/`TestWindowExt` (see gpui-kit
+# TESTING.md). It recompiles gpui-kit, so it is opt-in for a fast `cargo test`.
+[lints]
+workspace = true

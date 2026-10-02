@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://byteowlz.dev/{{project_name}}/config.schema.json",
+  "title": "{{project_name}} Config",
+  "description": "Configuration for the {{project_name}} GPUI desktop app.",
+  "type": "object",
+  "properties": {
+    "theme": {
+      "type": "string",
+      "description": "The active design-system scheme (a name in the theme set).",
+      "default": "Example Dark"
+    },
+    "accent_font": {
+      "type": "string",
+      "description": "Display face used for accents (section headings, status bar). Use an installed family.",
+      "default": "SystemUIFont"
+    },
+    "window": {
+      "type": "object",
+      "description": "Initial window geometry.",
+      "properties": {
+        "width": { "type": "number", "minimum": 200, "default": 1200 },
+        "height": { "type": "number", "minimum": 200, "default": 800 }
+      }
+    }
+  },
+  "required": ["theme", "accent_font", "window"]
+}

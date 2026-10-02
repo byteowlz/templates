@@ -1,0 +1,13 @@
+# {{project_name}} configuration.
+# Located at: $XDG_CONFIG_HOME/{{project_name}}/config.toml (or ~/.config/{{project_name}}/config.toml)
+# Resolution order: CLI args > explicit file > env vars > this file.
+
+# The active design-system scheme (a name in the theme set).
+theme = "Example Dark"
+
+# Display face for accents (section headings, status bar). Use an installed family.
+accent_font = "SystemUIFont"
+
+[window]
+width = 1200.0
+height = 800.0
