@@ -67,4 +67,4 @@ Templates use `{{project_name}}` as a placeholder. This is replaced during scaff
 
 ## Conventions
 
-- [OSC7501.md](OSC7501.md) — Program Status Protocol: byteowlz convention for long-running programs (agents, servers, jobs) to report status to the terminal. Complements `AGENT_CTX` (identity/context in via env, see `byteowlz/schemas/agent-context-env`): OSC 7501 is status out via the pty.
+- [OSC7501.md](OSC7501.md) — Adopt terminal program status where useful; headless apps use structured activity channels. AGENT_CTX supplies injected runtime attribution, not live state. Contract development: standalone `wismut/agent-ctx` on Forgejo (local `../agent-ctx`); v3 is draft.
