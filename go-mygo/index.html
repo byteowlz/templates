@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{project_name}}</title></head>
+<body><main><h1>{{project_name}}</h1><p>Illustrative starter, not an approved product composition. Read-only synthetic fixture.</p>
+<div id="actions"><button id="refresh" type="button">Read fixture</button><button id="validate" type="button" disabled>Validate exported snapshot</button></div>
+<p id="status" role="status" aria-live="polite">Connecting to the shared Go service…</p><pre id="snapshot" aria-label="Fixture snapshot"></pre>
+<p>Headless equivalent: <code>{{project_name}}ctl snapshot --json</code>. In a browser preview IPC is unavailable; no silent demo fallback.</p></main>
+<script type="module" src="/src/main.ts"></script></body></html>

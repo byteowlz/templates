@@ -1,0 +1,7 @@
+node_modules/
+dist/
+build/
+.mygo/
+config.toml
+artifacts/
+*.syso

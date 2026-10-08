@@ -1,0 +1,48 @@
+# {{project_name}} — MyGo system-webview + shared Go service.
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+default:
+    @just --list
+
+install:
+    bun install --frozen-lockfile
+    go mod download
+
+generate:
+    go tool mygo generate
+
+build: generate
+    bun run build:web
+    mkdir -p build
+    go build -o build/{{project_name}}ctl ./cmd/ctl
+    go tool mygo build -skip-build-command -skip-dmg
+
+test: generate
+    go test -race ./...
+    bun test
+
+check: generate
+    test -z "$(gofmt -l main.go internal cmd schemas)"
+    go vet ./...
+    bun run typecheck
+    bun run build:web
+    bun test
+    go test -race ./...
+
+dev:
+    go tool mygo dev
+
+# Full native package on the current platform. Local/ad-hoc, never auto-upload.
+package:
+    go tool mygo build
+
+# Executes real CLI + desktop facade fixture parity, schemas, denials and drift.
+agent-check: generate
+    go test -race ./internal/...
+    mkdir -p build artifacts/agent-check
+    go build -o build/{{project_name}}ctl ./cmd/ctl
+    bun scripts/agent-check.ts build/{{project_name}}ctl
+
+# Rerun evidence in a fully replaced, isolated scaffold.
+scaffold-check:
+    bun scripts/scaffold-check.ts

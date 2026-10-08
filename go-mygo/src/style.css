@@ -1,0 +1,16 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+main { max-width: 72ch; margin-inline: auto; padding: clamp(1rem, 4vw, 2.5rem); }
+h1 { font-size: 1.6rem; line-height: 1.2; text-wrap: balance; }
+p { line-height: 1.6; }
+#actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-block: 1.5rem; }
+button { min-height: 44px; padding: .6rem 1rem; background: var(--secondary); color: var(--foreground); border: 1px solid var(--border); border-radius: var(--radius-sm); font: inherit; cursor: pointer; }
+button:hover:enabled { background: var(--accent); }
+button:disabled { color: var(--muted-foreground); cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+#status { color: var(--foreground); }
+pre { background: var(--surface-sunken); padding: 1rem; border-radius: var(--radius-lg); overflow: auto; min-height: 10rem; line-height: 1.6; }
+code, pre { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+::selection { background: var(--accent); color: var(--foreground); }
+* { scrollbar-color: var(--muted-foreground) var(--surface-sunken); }
