@@ -11,6 +11,7 @@ Project templates for use with `byt new`.
 | `rust-gpui`         | Native GPUI desktop app; byteowlz design system built in (one `gpui-kit` dep, `scheme -> closed role layer -> gpui theme set`)     |
 | `python-cli`        | Python CLI with uv, typer, XDG paths                                                                                              |
 | `go-cli`            | Go CLI with cobra, viper, XDG paths                                                                                               |
+| `go-mygo`           | Fully native MyGo v0.3.2 GPU UI + canonical Base24/roles/R1 adapter, XDG TOML and shared semantic CLI; no HTML/webview |
 | `webapp`            | Focused webapp: Vite + React + TS + Tailwind v4, byteowlz design-system tokens, optional omarchy theme follow + oqto app manifest |
 | `experiment-review` | Private, mobile-first curated comparison gallery (pxltr visual grammar, synthetic samples only)                                   |
 
@@ -26,6 +27,11 @@ byt new myproject --template rust-cli --github
 # On byt versions without the named experiment-review template:
 byt new myreview --from-git byteowlz/templates --subdir experiment-review
 ```
+
+`go-mygo` uses Go-only native `ui.View`; the unselected system-webview prototype
+is preserved on `feat/mygo-webview-prototype`, not as the default template.
+Its fixture agent gate is evidence-scoped, not a consumer readiness certificate.
+Native signing/release configuration is deliberately left to consumers.
 
 ## Template Structure
 

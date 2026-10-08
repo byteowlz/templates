@@ -38,6 +38,12 @@
       "languages": ["go"],
       "features": ["cobra", "viper", "xdg", "release-workflow"]
     },
+    "go-mygo": {
+      "description": "Fully native MyGo v0.3.2 GPU desktop UI with canonical Base24/roles/R1 adapter and shared semantic Go CLI (no HTML/webview)",
+      "path": "go-mygo",
+      "languages": ["go"],
+      "features": ["native-ui", "design-system", "config", "xdg", "omarchy-data", "semantic-cli", "agent-readiness"]
+    },
     "webapp": {
       "description": "Focused webapp (Vite + React + TS + Tailwind v4, byteowlz design-system tokens; optional omarchy theme + oqto app)",
       "path": "webapp",

@@ -1,0 +1,174 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Example service envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "ok"
+  ],
+  "properties": {
+    "version": {
+      "const": "1"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "snapshot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "revision",
+            "items"
+          ],
+          "properties": {
+            "revision": {
+              "const": "fixture-v1"
+            },
+            "items": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "label"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "appearance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "theme",
+            "radius",
+            "colors"
+          ],
+          "properties": {
+            "theme": {
+              "enum": [
+                "dark",
+                "light",
+                "omarchy"
+              ]
+            },
+            "radius": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 32
+            },
+            "colors": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "theme",
+            "radius",
+            "omarchy_file"
+          ],
+          "properties": {
+            "theme": {
+              "enum": [
+                "dark",
+                "light",
+                "omarchy"
+              ]
+            },
+            "radius": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 32
+            },
+            "omarchy_file": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "enum": [
+            "USAGE",
+            "INVALID_CONFIG",
+            "INVALID_INPUT",
+            "INVALID_OPERATION",
+            "STALE_REVISION",
+            "AUTHORITY_DENIED",
+            "CANCELLED",
+            "INVALID_THEME",
+            "THEME_UNAVAILABLE"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "ok": {
+          "const": true
+        }
+      },
+      "required": [
+        "result"
+      ],
+      "not": {
+        "required": [
+          "error"
+        ]
+      }
+    },
+    {
+      "properties": {
+        "ok": {
+          "const": false
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "not": {
+        "required": [
+          "result"
+        ]
+      }
+    }
+  ]
+}

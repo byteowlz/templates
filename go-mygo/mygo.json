@@ -1,0 +1,6 @@
+{
+  "name": "{{project_name}}",
+  "identifier": "com.byteowlz.{{project_name}}",
+  "version": "0.1.0",
+  "out": "build"
+}

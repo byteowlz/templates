@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "{{project_name}} config",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "theme": {
+      "type": "string",
+      "enum": [
+        "dark",
+        "light",
+        "omarchy"
+      ],
+      "default": "dark"
+    },
+    "radius": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 32,
+      "default": 0
+    },
+    "omarchy_file": {
+      "type": "string",
+      "default": ""
+    }
+  }
+}
