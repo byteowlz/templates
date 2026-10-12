@@ -98,86 +98,56 @@ func resolveConfigFile(app string, override string) (string, error) {
 	return filepath.Join(dir, "config.toml"), nil
 }
 
-func defaultConfigDir(app string) (string, error) {
-	if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {
-		return filepath.Join(dir, app), nil
+// resolveBase applies the XDG Base Directory Specification: the variable is
+// used only when it holds an absolute path (unset, empty and relative values are
+// ignored), else $HOME/<unixRel>. Windows falls back to its known folder instead,
+// matching the rust-cli template. macOS uses the XDG defaults, not
+// ~/Library/Application Support.
+func resolveBase(xdg, home, winDir string, isWindows bool, unixRel string) (string, error) {
+	if xdg != "" && filepath.IsAbs(xdg) {
+		return xdg, nil
 	}
-
-	if runtime.GOOS == "windows" {
-		if dir := os.Getenv("APPDATA"); dir != "" {
-			return filepath.Join(dir, app), nil
+	if isWindows {
+		if winDir == "" {
+			return "", fmt.Errorf("unable to determine base directory")
 		}
+		return winDir, nil
 	}
-
-	if dir, err := os.UserConfigDir(); err == nil && dir != "" {
-		return filepath.Join(dir, app), nil
+	if home == "" {
+		return "", fmt.Errorf("unable to determine home directory")
 	}
+	return filepath.Join(home, unixRel), nil
+}
 
-	home, err := os.UserHomeDir()
+func baseDir(xdgVar, unixRel, winVar string) (string, error) {
+	home, _ := os.UserHomeDir()
+	base, err := resolveBase(os.Getenv(xdgVar), home, os.Getenv(winVar), runtime.GOOS == "windows", unixRel)
 	if err != nil {
-		return "", fmt.Errorf("determine home directory: %w", err)
+		return "", fmt.Errorf("%w (%s)", err, xdgVar)
 	}
-	return filepath.Join(home, ".config", app), nil
+	return base, nil
+}
+
+func appDir(app, xdgVar, unixRel, winVar string) (string, error) {
+	base, err := baseDir(xdgVar, unixRel, winVar)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(base, app), nil
+}
+
+func defaultConfigDir(app string) (string, error) {
+	return appDir(app, "XDG_CONFIG_HOME", ".config", "APPDATA")
 }
 
 func defaultDataDir(app string) (string, error) {
-	if dir := os.Getenv("XDG_DATA_HOME"); dir != "" {
-		return filepath.Join(dir, app), nil
-	}
-
-	if runtime.GOOS == "windows" {
-		if dir := os.Getenv("LOCALAPPDATA"); dir != "" {
-			return filepath.Join(dir, app), nil
-		}
-	}
-
-	if dir, err := os.UserCacheDir(); err == nil && dir != "" && runtime.GOOS == "darwin" {
-		return filepath.Join(dir, app), nil
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("determine home directory: %w", err)
-	}
-	return filepath.Join(home, ".local", "share", app), nil
+	return appDir(app, "XDG_DATA_HOME", filepath.Join(".local", "share"), "APPDATA")
 }
 
 func defaultStateDir(app string) (string, error) {
-	if dir := os.Getenv("XDG_STATE_HOME"); dir != "" {
-		return filepath.Join(dir, app), nil
-	}
-
-	if runtime.GOOS == "windows" {
-		if dir := os.Getenv("LOCALAPPDATA"); dir != "" {
-			return filepath.Join(dir, app), nil
-		}
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("determine home directory: %w", err)
-	}
-	return filepath.Join(home, ".local", "state", app), nil
+	return appDir(app, "XDG_STATE_HOME", filepath.Join(".local", "state"), "LOCALAPPDATA")
 }
 
 func defaultCacheDir(app string) (string, error) {
-	if dir := os.Getenv("XDG_CACHE_HOME"); dir != "" {
-		return filepath.Join(dir, app), nil
-	}
-
-	if runtime.GOOS == "windows" {
-		if dir := os.Getenv("LOCALAPPDATA"); dir != "" {
-			return filepath.Join(dir, app, "cache"), nil
-		}
-	}
-
-	if dir, err := os.UserCacheDir(); err == nil && dir != "" {
-		return filepath.Join(dir, app), nil
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("determine home directory: %w", err)
-	}
-	return filepath.Join(home, ".cache", app), nil
+	return appDir(app, "XDG_CACHE_HOME", ".cache", "LOCALAPPDATA")
 }

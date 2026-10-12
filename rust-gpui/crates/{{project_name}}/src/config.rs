@@ -70,15 +70,33 @@ impl Default for Config {
     }
 }
 
-/// `$XDG_CONFIG_HOME` or `~/.config`.
-fn config_root() -> PathBuf {
-    if let Some(dir) = std::env::var_os("XDG_CONFIG_HOME") {
-        return PathBuf::from(dir);
+/// XDG Base Directory Specification, matching the rust-cli template: use
+/// `$XDG_CONFIG_HOME` only when it is absolute (unset, empty and relative values
+/// are ignored), else `~/.config` (also on macOS), or `%APPDATA%` on Windows.
+fn resolve_config_root(
+    xdg: Option<PathBuf>,
+    home: Option<PathBuf>,
+    appdata: Option<PathBuf>,
+    is_windows: bool,
+) -> PathBuf {
+    if let Some(dir) = xdg.filter(|p| p.is_absolute()) {
+        return dir;
     }
-    std::env::var_os("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir)
-        .join(".config")
+    let fallback = if is_windows {
+        appdata
+    } else {
+        home.map(|h| h.join(".config"))
+    };
+    fallback.unwrap_or_else(|| std::env::temp_dir().join(".config"))
+}
+
+fn config_root() -> PathBuf {
+    resolve_config_root(
+        std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from),
+        std::env::var_os("HOME").map(PathBuf::from),
+        std::env::var_os("APPDATA").map(PathBuf::from),
+        cfg!(windows),
+    )
 }
 
 /// Path to this app's config file.
@@ -112,7 +130,9 @@ pub fn load_or_create() -> Result<Config> {
 /// Load config from a specific file.
 pub fn load(path: &Path) -> Result<Config> {
     let builder = config::Config::builder().add_source(config::File::from(path));
-    let source = builder.build().with_context(|| format!("load {}", path.display()))?;
+    let source = builder
+        .build()
+        .with_context(|| format!("load {}", path.display()))?;
     let cfg: Config = source.try_deserialize().context("parse config")?;
     Ok(cfg)
 }
@@ -125,12 +145,48 @@ mod tests {
     #[test]
     fn default_toml_deserializes() {
         let cfg = config::Config::builder()
-            .add_source(config::File::from_str(DEFAULT_TOML, config::FileFormat::Toml))
+            .add_source(config::File::from_str(
+                DEFAULT_TOML,
+                config::FileFormat::Toml,
+            ))
             .build()
             .unwrap();
         let cfg: Config = cfg.try_deserialize().unwrap();
         assert_eq!(cfg.theme, "Example Dark");
         assert_eq!(cfg.window.width, 1200.0);
+    }
+
+    #[test]
+    fn config_root_follows_xdg_spec() {
+        let home = Some(PathBuf::from("/home/ada"));
+        let resolve = |xdg: Option<&str>| {
+            resolve_config_root(xdg.map(PathBuf::from), home.clone(), None, false)
+        };
+        assert_eq!(
+            [
+                resolve(Some("/custom")),
+                resolve(None),
+                resolve(Some("")),
+                resolve(Some("rel")),
+                resolve(Some("~/c"))
+            ],
+            [
+                PathBuf::from("/custom"),
+                PathBuf::from("/home/ada/.config"),
+                PathBuf::from("/home/ada/.config"),
+                PathBuf::from("/home/ada/.config"),
+                PathBuf::from("/home/ada/.config"),
+            ]
+        );
+        assert_eq!(
+            resolve_config_root(
+                Some("rel".into()),
+                home.clone(),
+                Some("/appdata".into()),
+                true
+            ),
+            PathBuf::from("/appdata")
+        );
     }
 
     #[test]

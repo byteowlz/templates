@@ -30,7 +30,7 @@ This repository provides a batteries-included starting point for building cross-
 ## Features
 
 - Cobra-powered command interface with shared global flags (`-q`, `-v`, `--debug`, `--trace`, `--json`, `--yaml`, `--log-format`, `--no-color`, `--dry-run`, `--yes`).
-- Viper-based configuration loader that creates `$XDG_CONFIG_HOME/go-cli/config.toml` (or platform equivalents) on first run.
+- Viper-based configuration loader that creates `$XDG_CONFIG_HOME/go-cli/config.toml` (`~/.config/go-cli` on Linux and macOS, `%APPDATA%` on Windows) on first run.
 - Environment overrides using the `GO_CLI__*` prefix; e.g. `GO_CLI__LOGGING__LEVEL=debug`.
 - Configurable data and state directories that honor XDG locations on Unix and the appropriate directories on Windows.
 - Shell completion generation via `go run . -- completions <shell>`.
@@ -56,7 +56,7 @@ Global flags apply to every subcommand, enabling quiet mode, stacked verbosity (
 
 - Default config path: `$XDG_CONFIG_HOME/go-cli/config.toml` (or `%APPDATA%\go-cli\config.toml` on Windows). Override with `--config <path>`.
 - Sample configuration with inline comments is available at `examples/config.toml`.
-- Data and state directories default to `$XDG_DATA_HOME/go-cli` and `$XDG_STATE_HOME/go-cli` (falling back to `~/.local/share` and `~/.local/state` when unset). Override inside the config file.
+- Data and state directories default to `$XDG_DATA_HOME/go-cli` and `$XDG_STATE_HOME/go-cli` (falling back to `~/.local/share` and `~/.local/state` when unset, empty or relative, per the XDG Base Directory Specification). Override inside the config file.
 - Values support `~` expansion and environment variables (e.g. `$HOME/logs/app.log`).
 
 ## Development Workflow

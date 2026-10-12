@@ -13,7 +13,6 @@ except ModuleNotFoundError:  # pragma: no cover
     import tomli  # type: ignore[no-redef]
 
 import tomli_w
-from platformdirs import PlatformDirs
 
 APP_NAME = "python-cli"
 ENV_PREFIX = "PYTHON_CLI__"
@@ -70,40 +69,42 @@ profile = "default"
 """
 
 
-def default_dirs() -> PlatformDirs:
-    return PlatformDirs(appname=APP_NAME, appauthor=False)
+def _base_dir(env: Mapping[str, str], xdg_var: str, unix_rel: str, win_var: str) -> Path:
+    """XDG Base Directory Specification, matching the rust-cli template.
+
+    The variable is used only when it holds an absolute path; unset, empty and
+    relative values are ignored (no ``~``/``$VAR`` expansion). The fallback is
+    ``$HOME/<unix_rel>`` (also on macOS), or the known folder on Windows.
+    """
+    value = Path(env.get(xdg_var, ""))
+    if value.is_absolute():
+        return value
+    if os.name == "nt":
+        if env.get(win_var):
+            return Path(env[win_var])
+        raise RuntimeError(f"unable to determine base directory ({xdg_var})")
+    home = env.get("HOME") or str(Path.home())
+    return Path(home) / unix_rel
 
 
 def default_config_path(env: Mapping[str, str] | None = None) -> Path:
-    env = env or os.environ
-    base = env.get("XDG_CONFIG_HOME")
-    if base:
-        return _expand_path(base, env) / APP_NAME / "config.toml"
-    return Path(default_dirs().user_config_dir) / "config.toml"
+    env = os.environ if env is None else env
+    return _base_dir(env, "XDG_CONFIG_HOME", ".config", "APPDATA") / APP_NAME / "config.toml"
 
 
 def default_data_dir(env: Mapping[str, str] | None = None) -> Path:
-    env = env or os.environ
-    base = env.get("XDG_DATA_HOME")
-    if base:
-        return _expand_path(base, env) / APP_NAME
-    return Path(default_dirs().user_data_dir)
+    env = os.environ if env is None else env
+    return _base_dir(env, "XDG_DATA_HOME", ".local/share", "APPDATA") / APP_NAME
 
 
 def default_state_dir(env: Mapping[str, str] | None = None) -> Path:
-    env = env or os.environ
-    base = env.get("XDG_STATE_HOME")
-    if base:
-        return _expand_path(base, env) / APP_NAME
-    return Path(default_dirs().user_state_dir)
+    env = os.environ if env is None else env
+    return _base_dir(env, "XDG_STATE_HOME", ".local/state", "LOCALAPPDATA") / APP_NAME
 
 
 def default_cache_dir(env: Mapping[str, str] | None = None) -> Path:
-    env = env or os.environ
-    base = env.get("XDG_CACHE_HOME")
-    if base:
-        return _expand_path(base, env) / APP_NAME
-    return Path(default_dirs().user_cache_dir)
+    env = os.environ if env is None else env
+    return _base_dir(env, "XDG_CACHE_HOME", ".cache", "LOCALAPPDATA") / APP_NAME
 
 
 def load_config(path: Path | None, env: Mapping[str, str]) -> tuple[AppConfig, Path]:
@@ -270,10 +271,3 @@ def _coerce_optional_int(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
-
-
-def _expand_path(raw: str, env: Mapping[str, str]) -> Path:
-    expanded = os.path.expanduser(raw)
-    for key, value in env.items():
-        expanded = expanded.replace(f"${key}", value).replace(f"${{{key}}}", value)
-    return Path(expanded)

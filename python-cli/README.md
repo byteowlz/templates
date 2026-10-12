@@ -31,7 +31,7 @@ This repository provides a batteries-included starting point for building cross-
 ## Features
 
 - Typer-powered command interface with shared global flags (`-q`, `-v`, `--debug`, `--trace`, `--json`, `--yaml`, `--no-color`, `--dry-run`, `--yes`).
-- Structured configuration loader that creates `$XDG_CONFIG_HOME/python-cli/config.toml` (or platform equivalents) on first run.
+- Structured configuration loader that creates `$XDG_CONFIG_HOME/python-cli/config.toml` (`~/.config/python-cli` on Linux and macOS, `%APPDATA%` on Windows) on first run.
 - Environment overrides using the `PYTHON_CLI__*` prefix; e.g. `PYTHON_CLI__LOGGING__LEVEL=debug`.
 - Configurable data and state directories that honor XDG locations on Unix and the appropriate directories on Windows.
 - Shell completion generation via `uv run python-cli -- completions <shell>`.
@@ -57,7 +57,7 @@ Global flags apply to every subcommand, enabling quiet mode, stacked verbosity (
 
 - Default config path: `$XDG_CONFIG_HOME/python-cli/config.toml` (or `%APPDATA%\python-cli\config.toml` on Windows). Override with `--config <path>`.
 - Sample configuration with inline comments is available at `examples/config.toml`.
-- Data and state directories default to `$XDG_DATA_HOME/python-cli` and `$XDG_STATE_HOME/python-cli` (falling back to `~/.local/share` and `~/.local/state` when unset). Override inside the config file.
+- Data and state directories default to `$XDG_DATA_HOME/python-cli` and `$XDG_STATE_HOME/python-cli` (falling back to `~/.local/share` and `~/.local/state` when unset, empty or relative, per the XDG Base Directory Specification). Override inside the config file.
 - Values support `~` expansion and environment variables via the `PYTHON_CLI__*` prefix.
 
 ## Development Workflow
