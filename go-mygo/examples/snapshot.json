@@ -1,0 +1,13 @@
+{
+  "revision": "fixture-v1",
+  "items": [
+    {
+      "id": "sample-a",
+      "label": "Synthetic sample A"
+    },
+    {
+      "id": "sample-b",
+      "label": "Synthetic sample B"
+    }
+  ]
+}

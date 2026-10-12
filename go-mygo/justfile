@@ -1,0 +1,47 @@
+# {{project_name}} — fully native MyGo GPU ui.View, no frontend build.
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+root := justfile_directory()
+
+default:
+    @just --list
+
+install:
+    go mod download
+
+build:
+    mkdir -p build
+    go build -o build/{{project_name}}ctl ./cmd/ctl
+    go tool mygo build -skip-dmg
+
+test:
+    go test -race ./...
+    cd third_party/mygo-go && go test -race ./...
+
+check:
+    test -z "$(gofmt -l main.go internal cmd schemas scripts)"
+    go vet ./...
+    go test -race ./...
+    go build ./...
+    cd third_party/mygo-go && just check
+
+dev:
+    go tool mygo dev
+
+# Full current-platform native package; local/ad-hoc, no auto-upload.
+package:
+    go tool mygo build
+
+agent-check:
+    mkdir -p artifacts/agent-check artifacts/headless build
+    MYGO_HEADLESS_ARTIFACT_DIR="{{root}}/artifacts/headless" go test -race -count=1 -v ./internal/... | tee artifacts/agent-check/go-tests.log
+    cd third_party/mygo-go && go test -race -count=1 ./...
+    go build -o build/{{project_name}}ctl ./cmd/ctl
+    go run ./cmd/agent-check build/{{project_name}}ctl
+
+# Real native window + CPU content capture + independently logged render path.
+native-proof:
+    mkdir -p artifacts/native
+    MYGO_FRAME_STATS=all go run ./cmd/native-proof artifacts/native 2>artifacts/native/frame-stats.log
+
+scaffold-check:
+    ./scripts/scaffold-check.sh

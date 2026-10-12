@@ -1,0 +1,4 @@
+# Scalars overlay: flags > explicit --config > MYGO_APP_* env > local > global.
+theme = "dark" # dark | light | omarchy
+radius = 0     # native identity dial: 0..32 DIP
+omarchy_file = "" # data only, read only when theme="omarchy"
