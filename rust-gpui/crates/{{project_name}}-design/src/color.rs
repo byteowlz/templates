@@ -3,7 +3,7 @@
 //! to sRGB `Rgba` in 0..1 and is emitted as `#rrggbb[aa]`, which the
 //! gpui-component theme parser accepts.
 
-use anyhow::{Result, anyhow, bail, Context};
+use anyhow::{Context, Result, anyhow, bail};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rgba {

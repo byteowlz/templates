@@ -366,8 +366,14 @@ mod tests {
         assert_eq!(themes[1]["mode"], "light");
         assert_eq!(themes[1]["is_default"], true);
         // Role mapping: background -> base00, primary/success -> base0B.
-        assert_eq!(themes[0]["colors"]["background"], dark.slot("base00").to_hex());
-        assert_eq!(themes[0]["colors"]["primary.background"], dark.slot("base0B").to_hex());
+        assert_eq!(
+            themes[0]["colors"]["background"],
+            dark.slot("base00").to_hex()
+        );
+        assert_eq!(
+            themes[0]["colors"]["primary.background"],
+            dark.slot("base0B").to_hex()
+        );
         assert!(themes[0]["highlight"]["editor.background"].is_string());
     }
 
@@ -378,10 +384,8 @@ mod tests {
             radius: RadiusScale::new(8.0),
             ..Default::default()
         };
-        let v: Value = serde_json::from_str(
-            &theme_set_json("Example", &[&dark], &identity).unwrap(),
-        )
-        .unwrap();
+        let v: Value =
+            serde_json::from_str(&theme_set_json("Example", &[&dark], &identity).unwrap()).unwrap();
         assert_eq!(v["themes"][0]["radius"], 8);
         assert_eq!(v["themes"][0]["radius.lg"], 10);
     }

@@ -122,9 +122,22 @@ mod tests {
         let mut names: Vec<&'static str> = Role::ALL.iter().map(|r| r.name()).collect();
         names.sort_unstable();
         let mut expect = vec![
-            "accent", "background", "border", "danger", "foreground", "info", "input", "muted",
-            "muted-foreground", "primary", "ring", "secondary", "success", "surface",
-            "surface-sunken", "warning",
+            "accent",
+            "background",
+            "border",
+            "danger",
+            "foreground",
+            "info",
+            "input",
+            "muted",
+            "muted-foreground",
+            "primary",
+            "ring",
+            "secondary",
+            "success",
+            "surface",
+            "surface-sunken",
+            "warning",
         ];
         expect.sort_unstable();
         assert_eq!(names, expect);

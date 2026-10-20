@@ -4,8 +4,8 @@
 //! toggle — all read from `cx.theme()` (the role layer), never a
 //! host-specific hex.
 
-use gpui_kit::component::button::{Button, ButtonVariants as _};
 use gpui_kit::component::ActiveTheme as _;
+use gpui_kit::component::button::{Button, ButtonVariants as _};
 use gpui_kit::{
     ClickEvent, Context, FontWeight, Hsla, IntoElement, ParentElement as _, Render, Styled as _,
     Window, div, px, transparent_black,
@@ -109,15 +109,11 @@ impl Render for App {
                                     .font_family(accent_font.clone())
                                     .child("Design-system roles"),
                             )
-                            .child(
-                                div()
-                                    .text_color(theme.muted_foreground)
-                                    .child(
-                                        "Every color below comes from the scheme's closed role \
+                            .child(div().text_color(theme.muted_foreground).child(
+                                "Every color below comes from the scheme's closed role \
                                          layer — reskin the scheme and the whole app follows. \
                                          No host-specific hex.",
-                                    ),
-                            )
+                            ))
                             // A raised card uses the `surface` role.
                             .child(
                                 div()
@@ -135,21 +131,14 @@ impl Render for App {
                                             .font_weight(FontWeight::SEMIBOLD)
                                             .child("An elevated card"),
                                     )
-                                    .child(
-                                        div()
-                                            .flex()
-                                            .items_center()
-                                            .gap_3()
-                                            .child(
-                                                Button::new("greet")
-                                                    .primary()
-                                                    .label("Say hi")
-                                                    .on_click(cx.listener(|this, _: &ClickEvent, _window, cx| {
-                                                        this.count += 1;
-                                                        cx.notify();
-                                                    })),
-                                            ),
-                                    )
+                                    .child(div().flex().items_center().gap_3().child(
+                                        Button::new("greet").primary().label("Say hi").on_click(
+                                            cx.listener(|this, _: &ClickEvent, _window, cx| {
+                                                this.count += 1;
+                                                cx.notify();
+                                            }),
+                                        ),
+                                    ))
                                     .child(
                                         div()
                                             .text_color(theme.muted_foreground)
@@ -178,7 +167,11 @@ impl Render for App {
                     .border_color(theme.border)
                     .text_size(px(11.))
                     .text_color(theme.muted_foreground)
-                    .child(format!("{} · {} ready", env!("CARGO_PKG_NAME"), self.theme_name)),
+                    .child(format!(
+                        "{} · {} ready",
+                        env!("CARGO_PKG_NAME"),
+                        self.theme_name
+                    )),
             )
     }
 }
