@@ -40,6 +40,11 @@ check:
     just typecheck
     just lint
     just build
+    just omarchy-drift
+
+# Verify the Omarchy mapping still matches design-system/spec/omarchy-map.json
+omarchy-drift:
+    node scripts/check-omarchy-map.mjs
 
 # === Serving ===
 

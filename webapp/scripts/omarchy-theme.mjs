@@ -3,12 +3,17 @@
  * Omarchy theme adapter — maps the machine's active omarchy theme onto the
  * byteowlz design-system slot vars (src/theme/omarchy.generated.css).
  *
- * Mapping contract (byteowlz govnr ADR-0040, "Omarchy compatibility fixture"):
+ * Mapping contract: design-system/spec/omarchy.md (carrying the governing
+ * decision from Oqto ADR-0040, "Omarchy compatibility fixture"):
  * the omarchy canonical semantic palette maps deterministically onto base24 —
  *   background family + selection + muted  → base00..base07 (with foregrounds)
  *   red/orange/yellow/green/cyan/blue/magenta/brown → base08..base0F
  *   dark/darker backgrounds + bright accents        → base10..base17
  * `mode` and `accent` stay explicit semantic metadata (--omarchy-mode/...-accent).
+ *
+ * Map by KEY NAME, never by file position: omarchy writes red,yellow,orange but
+ * base24 is base09=orange,base0A=yellow. `just omarchy-drift` checks this table
+ * against design-system/spec/omarchy-map.json.
  *
  * Usage:
  *   node scripts/omarchy-theme.mjs            # regenerate (exit 0 even without omarchy)

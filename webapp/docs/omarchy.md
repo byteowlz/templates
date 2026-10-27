@@ -22,8 +22,9 @@ Then reload the dev server (vite hot-reloads the CSS import).
   2. `~/.local/state/omarchy/current/theme/colors.toml`
   3. `~/.config/omarchy/current/theme/colors.toml` (legacy symlink)
 - Maps the canonical semantic palette deterministically onto base24
-  (contract: byteowlz govnr ADR-0040, "external theme ecosystems are data
-  sources; Omarchy is the first compatibility fixture"):
+  (contract: `design-system/spec/omarchy.md`, which carries the governing
+  decision from Oqto ADR-0040, "external theme ecosystems are data sources;
+  Omarchy is the first compatibility fixture"):
 
 | slots | omarchy keys |
 |---|---|
@@ -31,6 +32,11 @@ Then reload the dev server (vite hot-reloads the CSS import).
 | `base08`–`base0F` | `red`, `orange`, `yellow`, `green`, `cyan`, `blue`, `magenta`, `brown` |
 | `base10`–`base17` | `dark_background`, `darker_background`, `bright_red`, `bright_yellow`, `bright_green`, `bright_cyan`, `bright_blue`, `bright_magenta` |
 
+- **Map by key name, never by file position.** Omarchy writes its chromatic keys
+  `red, yellow, orange, ...`, but base24 is `base09=orange, base0A=yellow`.
+  A positional converter silently swaps orange and yellow in every theme — the
+  two most similar hues. `just omarchy-drift` fails if this table ever diverges
+  from the spec map.
 - `mode` and `accent` are preserved as explicit metadata
   (`--omarchy-mode`, `--omarchy-accent`) — never guessed from slots.
 - Legacy themes exposing only ANSI `color0..color15` get a best-effort partial
@@ -47,5 +53,5 @@ Then reload the dev server (vite hot-reloads the CSS import).
   edit, never commit personal theme values. Committed state = no-op
   passthrough so the import resolves everywhere.
 - Omarchy assets (wallpapers, icons, fonts) are NOT imported — palette data
-  only, per the ADR-0040 adapter contract.
+  only, per the `spec/omarchy.md` adapter contract.
 - The app must still look correct without omarchy (it does: house scheme).
